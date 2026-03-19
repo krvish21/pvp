@@ -411,9 +411,11 @@
 
         const WORLD_SIZE = 2000;
         const PLAYER_SIZE = 30;
-        const BULLET_SPEED = 15;
+        const BULLET_SPEED = 22; // faster bullets
+        const BULLET_RADIUS = 6; // bolder bullets
+        const BULLET_LIFE = 70;
         const PLAYER_SPEED = 5;
-        const FIRE_RATE = 150;
+        const FIRE_RATE = 110; // faster rate-of-fire
         const RELOAD_TIME = 2000;
         const MAX_AMMO = 30;
 
@@ -425,7 +427,8 @@
         ];
 
         // FIXED: Proper obstacles with collision
-        const OBSTACLES = [
+        // Some obstacles are moving (updated every frame).
+        let OBSTACLES = [
             { x: 600, y: 600, w: 120, h: 120, type: 'box' },
             { x: 1300, y: 600, w: 120, h: 120, type: 'box' },
             { x: 600, y: 1300, w: 120, h: 120, type: 'box' },
@@ -438,7 +441,28 @@
             { x: 450, y: 450, w: 60, h: 60, type: 'small' },
             { x: 1550, y: 450, w: 60, h: 60, type: 'small' },
             { x: 450, y: 1550, w: 60, h: 60, type: 'small' },
-            { x: 1550, y: 1550, w: 60, h: 60, type: 'small' }
+            { x: 1550, y: 1550, w: 60, h: 60, type: 'small' },
+
+            // Extra cover to make movement lanes more interesting
+            { x: 760, y: 420, w: 80, h: 140, type: 'cover' },
+            { x: 1160, y: 420, w: 80, h: 140, type: 'cover' },
+            { x: 760, y: 1440, w: 80, h: 140, type: 'cover' },
+            { x: 1160, y: 1440, w: 80, h: 140, type: 'cover' },
+
+            // Moving obstructions (dynamic cover)
+            { x: 760, y: 900, w: 180, h: 40, type: 'moving',
+              baseX: 760, baseY: 900, motion: { axis: 'x', amp: 260, period: 2400, phase: 0 } },
+            { x: 1120, y: 680, w: 40, h: 220, type: 'moving',
+              baseX: 1120, baseY: 680, motion: { axis: 'y', amp: 320, period: 3000, phase: 1.4 } }
+        ];
+
+        // Hazards (damage zones that are NOT solid for bullets)
+        const HAZARDS = [
+            { x: 820, y: 310, w: 220, h: 90, kind: 'fire', dps: 28 },
+            { x: 280, y: 880, w: 160, h: 160, kind: 'toxic', dps: 16 },
+            { x: 1560, y: 880, w: 160, h: 160, kind: 'toxic', dps: 16 },
+            { x: 880, y: 1620, w: 240, h: 90, kind: 'electric', dps: 22 },
+            { x: 860, y: 980, w: 120, h: 120, kind: 'fire', dps: 34 }
         ];
 
         // Game State
@@ -451,7 +475,10 @@
             gameStarted: false,
             myId: null,
             peerId: null,
-            reconnectAttempts: 0
+            reconnectAttempts: 0,
+            time: 0,
+            pulses: [],
+            nextPulseAt: 0
         };
 
         let myPlayer = {
@@ -465,7 +492,8 @@
             kills: 0,
             deaths: 0,
             lastFire: 0,
-            color: '#0f0'
+            color: '#0f0',
+            deathPending: false
         };
 
         let enemyPlayer = null;
@@ -475,7 +503,13 @@
         let joystickActive = false;
         let joystickVector = { x: 0, y: 0 };
         let firePressed = false;
+        let joystickFiring = false; // one-hand mode: shooting while thumb is on joystick
+        let fireButtonFiring = false; // explicit fire button (optional)
         let pingInterval = null;
+
+        function syncFirePressed() {
+            firePressed = joystickFiring || fireButtonFiring;
+        }
 
         // Resize canvas
         function resize() {
@@ -777,17 +811,121 @@
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
                 if (distance < radius) {
+                    const safeDistance = distance === 0 ? 0.0001 : distance; // avoid NaN push vectors
                     return {
                         hit: true,
                         obs: obs,
-                        pushX: (dx / distance) * (radius - distance),
-                        pushY: (dy / distance) * (radius - distance),
+                        pushX: (dx / safeDistance) * (radius - distance),
+                        pushY: (dy / safeDistance) * (radius - distance),
                         closestX: closestX,
                         closestY: closestY
                     };
                 }
             }
             return { hit: false };
+        }
+
+        // Updates moving obstacles (those with `motion` in their definition).
+        function updateDynamicObstacles() {
+            for (const obs of OBSTACLES) {
+                if (!obs.motion || typeof obs.baseX !== 'number') continue;
+                const t = gameState.time;
+                const phase = obs.motion.phase || 0;
+                const omega = (Math.PI * 2) / obs.motion.period; // period is in ms
+                const s = Math.sin(t * omega + phase);
+                if (obs.motion.axis === 'x') {
+                    obs.x = obs.baseX + s * obs.motion.amp;
+                } else if (obs.motion.axis === 'y') {
+                    obs.y = obs.baseY + s * obs.motion.amp;
+                }
+            }
+        }
+
+        function circleOverlapsRect(cx, cy, radius, rect) {
+            const closestX = Math.max(rect.x, Math.min(cx, rect.x + rect.w));
+            const closestY = Math.max(rect.y, Math.min(cy, rect.y + rect.h));
+            const dx = cx - closestX;
+            const dy = cy - closestY;
+            return (dx * dx + dy * dy) < (radius * radius);
+        }
+
+        function applyHazardDamage(dtSec) {
+            let damageTaken = 0;
+            for (const hz of HAZARDS) {
+                if (!circleOverlapsRect(myPlayer.x, myPlayer.y, PLAYER_SIZE * 0.9, hz)) continue;
+                damageTaken += hz.dps * dtSec;
+            }
+
+            if (damageTaken <= 0) return false;
+
+            myPlayer.hp -= damageTaken;
+
+            // Occasional sparks so hazards feel "alive"
+            if (Math.random() < 0.35) {
+                createSpark(myPlayer.x, myPlayer.y, Math.random() * Math.PI * 2);
+            }
+
+            updateHUD();
+            if (myPlayer.hp <= 0) {
+                handleDeath('hazard');
+                return true;
+            }
+
+            return false;
+        }
+
+        function maybeSpawnPulse() {
+            const PULSE_INTERVAL = 4200;
+            if (gameState.time < gameState.nextPulseAt) return;
+            gameState.nextPulseAt = gameState.time + PULSE_INTERVAL;
+
+            // Spawn pulses near hazards
+            const hz = HAZARDS[Math.floor(Math.random() * HAZARDS.length)];
+            const px = hz.x + hz.w / 2;
+            const py = hz.y + hz.h / 2;
+
+            gameState.pulses.push({
+                x: px,
+                y: py,
+                r: 0,
+                maxR: 420 + Math.random() * 120,
+                speed: 260 + Math.random() * 140,
+                life: 1,
+                hit: false
+            });
+        }
+
+        function updatePulses(dtSec) {
+            if (!gameState.pulses.length) return false;
+
+            const PULSE_DAMAGE = 18;
+            for (let i = gameState.pulses.length - 1; i >= 0; i--) {
+                const pulse = gameState.pulses[i];
+                pulse.r += pulse.speed * dtSec;
+
+                const dx = myPlayer.x - pulse.x;
+                const dy = myPlayer.y - pulse.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (!pulse.hit && dist < pulse.r + PLAYER_SIZE * 0.25) {
+                    pulse.hit = true;
+                    myPlayer.hp -= PULSE_DAMAGE;
+                    createExplosion(myPlayer.x, myPlayer.y);
+                    updateHUD();
+                }
+
+                pulse.life -= dtSec * 0.55;
+                if (pulse.life <= 0 || pulse.r > pulse.maxR) {
+                    gameState.pulses.splice(i, 1);
+                }
+
+                if (myPlayer.hp <= 0) {
+                    handleDeath('hazard');
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // Start game
@@ -817,6 +955,9 @@
             gameState.gameStarted = true;
             gameState.bullets = [];
             gameState.particles = [];
+            gameState.time = 0;
+            gameState.pulses = [];
+            gameState.nextPulseAt = 1000;
 
             updateHUD();
             lastTime = performance.now();
@@ -842,6 +983,8 @@
             updateJoystickCenter();
             const touch = e.touches[0];
             joystickActive = true;
+            joystickFiring = true; // one-hand play: joystick press also fires
+            syncFirePressed();
             updateJoystick(touch.clientX, touch.clientY);
         }, { passive: false });
 
@@ -856,8 +999,33 @@
             e.preventDefault();
             joystickActive = false;
             joystickVector = { x: 0, y: 0 };
+            joystickFiring = false;
+            syncFirePressed();
             knob.style.transform = `translate(-50%, -50%)`;
         }, { passive: false });
+
+        // Desktop / mouse support: drag joystick to move; holding the drag also fires.
+        joystick.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            updateJoystickCenter();
+            joystickActive = true;
+            joystickFiring = true;
+            syncFirePressed();
+            updateJoystick(e.clientX, e.clientY);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!joystickActive) return;
+            updateJoystick(e.clientX, e.clientY);
+        });
+
+        window.addEventListener('mouseup', () => {
+            joystickActive = false;
+            joystickVector = { x: 0, y: 0 };
+            knob.style.transform = `translate(-50%, -50%)`;
+            joystickFiring = false;
+            syncFirePressed();
+        });
 
         function updateJoystick(clientX, clientY) {
             const dx = clientX - joystickCenter.x;
@@ -886,21 +1054,36 @@
         const fireBtn = document.getElementById('fireBtn');
         fireBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            firePressed = true;
+            fireButtonFiring = true;
+            syncFirePressed();
         }, { passive: false });
 
         fireBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
-            firePressed = false;
+            fireButtonFiring = false;
+            syncFirePressed();
         }, { passive: false });
 
-        fireBtn.addEventListener('mousedown', () => firePressed = true);
-        fireBtn.addEventListener('mouseup', () => firePressed = false);
-        fireBtn.addEventListener('mouseleave', () => firePressed = false);
+        fireBtn.addEventListener('mousedown', () => {
+            fireButtonFiring = true;
+            syncFirePressed();
+        });
+        fireBtn.addEventListener('mouseup', () => {
+            fireButtonFiring = false;
+            syncFirePressed();
+        });
+        fireBtn.addEventListener('mouseleave', () => {
+            fireButtonFiring = false;
+            syncFirePressed();
+        });
 
         // Game logic
         function update(dt) {
             if (!gameState.gameStarted) return;
+
+            const dtSec = dt / 1000;
+            gameState.time += dt;
+            updateDynamicObstacles();
 
             // Movement with obstacle collision
             const nextX = myPlayer.x + joystickVector.x * PLAYER_SPEED;
@@ -926,6 +1109,11 @@
             // World bounds
             myPlayer.x = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, myPlayer.x));
             myPlayer.y = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, myPlayer.y));
+
+            // Hazards & pulses (damage zones)
+            if (applyHazardDamage(dtSec)) return;
+            maybeSpawnPulse();
+            if (updatePulses(dtSec)) return;
 
             // Auto-aim at enemy
             if (enemyPlayer && enemyPlayer.hp > 0) {
@@ -956,47 +1144,62 @@
             }
 
             // Update bullets with obstacle collision
+            const movePerFrame = BULLET_SPEED;
+            const subSteps = Math.max(1, Math.ceil(movePerFrame / 6));
+            const step = movePerFrame / subSteps;
+
             for (let i = gameState.bullets.length - 1; i >= 0; i--) {
                 const b = gameState.bullets[i];
-                b.x += Math.cos(b.angle) * BULLET_SPEED;
-                b.y += Math.sin(b.angle) * BULLET_SPEED;
-                b.life--;
+                let removed = false;
 
-                // Check bullet collision with obstacles
-                let bulletHitObs = checkObstacleCollision(b.x, b.y, 4);
-                if (bulletHitObs.hit) {
-                    createSpark(b.x, b.y, b.angle + Math.PI);
-                    gameState.bullets.splice(i, 1);
-                    continue;
-                }
+                for (let s = 0; s < subSteps; s++) {
+                    b.x += Math.cos(b.angle) * step;
+                    b.y += Math.sin(b.angle) * step;
 
-                // Check collision with enemy
-                if (b.owner === gameState.myId && enemyPlayer && enemyPlayer.hp > 0) {
-                    const dx = b.x - enemyPlayer.x;
-                    const dy = b.y - enemyPlayer.y;
-                    if (Math.sqrt(dx * dx + dy * dy) < PLAYER_SIZE) {
-                        const damage = 15;
-                        enemyPlayer.hp -= damage;
-                        createBloodSplatter(enemyPlayer.x, enemyPlayer.y);
-
-                        send({
-                            type: 'hit',
-                            damage: damage,
-                            killer: gameState.myId
-                        });
-
-                        if (enemyPlayer.hp <= 0) {
-                            handleKill();
-                        }
-
+                    // Check bullet collision with obstacles
+                    const bulletHitObs = checkObstacleCollision(b.x, b.y, BULLET_RADIUS);
+                    if (bulletHitObs.hit) {
+                        createSpark(b.x, b.y, b.angle + Math.PI);
                         gameState.bullets.splice(i, 1);
-                        continue;
+                        removed = true;
+                        break;
+                    }
+
+                    // Check collision with enemy (authoritative hit by the shooter client)
+                    if (b.owner === gameState.myId && enemyPlayer && enemyPlayer.hp > 0) {
+                        const dx = b.x - enemyPlayer.x;
+                        const dy = b.y - enemyPlayer.y;
+                        if ((dx * dx + dy * dy) < (PLAYER_SIZE * PLAYER_SIZE)) {
+                            const damage = 15;
+                            enemyPlayer.hp -= damage;
+                            createBloodSplatter(enemyPlayer.x, enemyPlayer.y);
+
+                            send({
+                                type: 'hit',
+                                damage: damage,
+                                killer: gameState.myId
+                            });
+
+                            if (enemyPlayer.hp <= 0) {
+                                handleKill();
+                            }
+
+                            gameState.bullets.splice(i, 1);
+                            removed = true;
+                            break;
+                        }
+                    }
+
+                    if (b.x < 0 || b.x > WORLD_SIZE || b.y < 0 || b.y > WORLD_SIZE) {
+                        gameState.bullets.splice(i, 1);
+                        removed = true;
+                        break;
                     }
                 }
 
-                if (b.x < 0 || b.x > WORLD_SIZE || b.y < 0 || b.y > WORLD_SIZE || b.life <= 0) {
-                    gameState.bullets.splice(i, 1);
-                }
+                if (removed) continue;
+                b.life--;
+                if (b.life <= 0) gameState.bullets.splice(i, 1);
             }
 
             // Update particles
@@ -1055,7 +1258,7 @@
                 x: x, y: y,
                 angle: angle,
                 owner: isMine ? gameState.myId : gameState.peerId,
-                life: 80,
+                life: BULLET_LIFE,
                 color: isMine ? '#0f0' : '#f00'
             });
         }
@@ -1120,8 +1323,16 @@
         }
 
         function handleDeath(killer) {
+            if (myPlayer.deathPending) return;
+            myPlayer.deathPending = true;
             myPlayer.deaths++;
-            addKillFeed(`You were terminated`);
+            if (killer === 'hazard') {
+                addKillFeed('You were eliminated by hazards');
+                send({ type: 'killFeed', text: 'Enemy eliminated by environmental hazards.' });
+            } else {
+                addKillFeed(`You were terminated`);
+            }
+            createExplosion(myPlayer.x, myPlayer.y);
             setTimeout(() => respawn(), 2000);
         }
 
@@ -1140,6 +1351,7 @@
             myPlayer.hp = 100;
             myPlayer.ammo = MAX_AMMO;
             myPlayer.reloading = false;
+            myPlayer.deathPending = false;
             send({ type: 'respawn', x: myPlayer.x, y: myPlayer.y });
             updateHUD();
         }
@@ -1196,25 +1408,31 @@
             // Draw obstacles
             drawObstacles();
 
+            // Hazards & pulses (keep the map active)
+            drawHazards();
+            drawPulses();
+
             // Bullets
             gameState.bullets.forEach(b => {
+                CTX.save();
+                CTX.globalCompositeOperation = 'lighter';
                 CTX.fillStyle = b.color;
-                CTX.shadowBlur = 10;
+                CTX.shadowBlur = 18;
                 CTX.shadowColor = b.color;
                 CTX.beginPath();
-                CTX.arc(b.x, b.y, 4, 0, Math.PI * 2);
+                CTX.arc(b.x, b.y, BULLET_RADIUS, 0, Math.PI * 2);
                 CTX.fill();
 
                 CTX.strokeStyle = b.color;
-                CTX.lineWidth = 3;
+                CTX.lineWidth = 5;
                 CTX.beginPath();
                 CTX.moveTo(b.x, b.y);
                 CTX.lineTo(
-                    b.x - Math.cos(b.angle) * 20,
-                    b.y - Math.sin(b.angle) * 20
+                    b.x - Math.cos(b.angle) * 28,
+                    b.y - Math.sin(b.angle) * 28
                 );
                 CTX.stroke();
-                CTX.shadowBlur = 0;
+                CTX.restore();
             });
 
             // Particles
@@ -1239,6 +1457,88 @@
 
             CTX.restore();
             drawMinimap();
+        }
+
+        function drawHazards() {
+            CTX.save();
+            const t = gameState.time / 1000;
+
+            HAZARDS.forEach(hz => {
+                let fill, glow, border;
+                if (hz.kind === 'fire') {
+                    fill = 'rgba(255, 80, 0, 0.25)';
+                    glow = '#ff8800';
+                    border = '#ff3b00';
+                } else if (hz.kind === 'electric') {
+                    fill = 'rgba(0, 220, 255, 0.18)';
+                    glow = '#00f0ff';
+                    border = '#00c8ff';
+                } else {
+                    fill = 'rgba(0, 255, 100, 0.14)';
+                    glow = '#35ff7a';
+                    border = '#14cc4b';
+                }
+
+                const flicker = 0.65 + 0.35 * Math.sin(t * 8 + hz.x * 0.01 + hz.y * 0.005);
+
+                CTX.fillStyle = fill;
+                CTX.globalAlpha = 0.85 * flicker;
+                CTX.fillRect(hz.x, hz.y, hz.w, hz.h);
+
+                // Border + glow
+                CTX.globalAlpha = 1;
+                CTX.strokeStyle = border;
+                CTX.lineWidth = 2;
+                CTX.shadowBlur = 22;
+                CTX.shadowColor = glow;
+                CTX.strokeRect(hz.x, hz.y, hz.w, hz.h);
+                CTX.shadowBlur = 0;
+
+                // Animated diagonal stripes inside hazard
+                CTX.save();
+                CTX.beginPath();
+                CTX.rect(hz.x, hz.y, hz.w, hz.h);
+                CTX.clip();
+                CTX.globalAlpha = 0.35 * flicker;
+                CTX.strokeStyle = glow;
+                CTX.lineWidth = 1;
+                const offset = (t * 60) % 20;
+                for (let i = -hz.h; i < hz.w + hz.h; i += 24) {
+                    CTX.beginPath();
+                    CTX.moveTo(hz.x + i + offset, hz.y);
+                    CTX.lineTo(hz.x + i + offset - hz.h, hz.y + hz.h);
+                    CTX.stroke();
+                }
+                CTX.restore();
+            });
+
+            CTX.restore();
+        }
+
+        function drawPulses() {
+            if (!gameState.pulses || !gameState.pulses.length) return;
+
+            CTX.save();
+            gameState.pulses.forEach(pulse => {
+                const alpha = Math.max(0, Math.min(1, pulse.life));
+                CTX.globalAlpha = 0.45 * alpha;
+                CTX.strokeStyle = '#00f0ff';
+                CTX.lineWidth = 2;
+                CTX.shadowBlur = 30;
+                CTX.shadowColor = '#00f0ff';
+                CTX.beginPath();
+                CTX.arc(pulse.x, pulse.y, pulse.r, 0, Math.PI * 2);
+                CTX.stroke();
+
+                CTX.globalAlpha = 0.15 * alpha;
+                CTX.lineWidth = 1;
+                CTX.beginPath();
+                CTX.arc(pulse.x, pulse.y, Math.max(6, pulse.r * 0.65), 0, Math.PI * 2);
+                CTX.stroke();
+                CTX.shadowBlur = 0;
+                CTX.globalAlpha = 1;
+            });
+            CTX.restore();
         }
 
         // FIXED: Better obstacle drawing with 3D effect
@@ -1344,6 +1644,22 @@
                     obs.w * scale,
                     obs.h * scale
                 );
+            });
+
+            // Draw hazards on minimap
+            HAZARDS.forEach(hz => {
+                let c = '#ff8800';
+                if (hz.kind === 'electric') c = '#00f0ff';
+                if (hz.kind === 'toxic') c = '#35ff7a';
+                MINI_CTX.fillStyle = c;
+                MINI_CTX.globalAlpha = 0.7;
+                MINI_CTX.fillRect(
+                    hz.x * scale,
+                    hz.y * scale,
+                    hz.w * scale,
+                    hz.h * scale
+                );
+                MINI_CTX.globalAlpha = 1;
             });
 
             // Players
