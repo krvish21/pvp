@@ -331,8 +331,8 @@
         /* In-game chat */
         #chatPanel {
             position: absolute;
-            left: 12px;
-            top: 56px;
+            right: 12px;
+            bottom: 12px;
             width: min(360px, 86vw);
             z-index: 120;
             pointer-events: auto;
@@ -340,8 +340,7 @@
 
         @media (max-width: 900px) {
             #chatPanel {
-                top: 52px;
-                width: min(320px, 70vw);
+                width: min(320px, 62vw);
             }
         }
 
@@ -506,6 +505,7 @@
         </div>
     </div>
 
+    <script src="./game-config.js"></script>
     <script>
         // Game Constants
         const CANVAS = document.getElementById('gameCanvas');
@@ -513,24 +513,37 @@
         const MINIMAP = document.getElementById('minimap');
         const MINI_CTX = MINIMAP.getContext('2d');
 
-        const WORLD_SIZE = 3200;
-        const PLAYER_SIZE = 30;
-        const PLAYER_COLLISION_RADIUS = 20; // smaller than draw size to avoid “sticky” collision
-        const AUTO_FIRE_RANGE = 380;
-        const AIM_RANGE = 800;
-        const BULLET_SPEED = 22; // faster bullets
-        const BULLET_RADIUS = 6; // bolder bullets
-        const BULLET_LIFE = 70;
-        const PLAYER_SPEED = 5;
-        const FIRE_RATE = 130; // tuned for balance
-        const RELOAD_TIME = 2000;
-        const MAX_AMMO = 30;
-        const PICKUP_RESPAWN_MS = 6500;
-        const SPEED_BOOST_MULTIPLIER = 1.7;
-        const SPEED_BOOST_DURATION = 3500;
-        const SHIELD_DURATION = 4200;
-        const SHIELD_DAMAGE_MULT = 0.55;
-        const HEALTH_PICKUP_AMOUNT = 28;
+        const CFG = window.GAME_CONFIG || {};
+        const WORLD_SIZE = CFG.worldSize ?? 3200;
+        const PLAYER_SIZE = CFG.playerSize ?? 30;
+        const PLAYER_COLLISION_RADIUS = CFG.playerCollisionRadius ?? 20; // smaller than draw size to avoid “sticky” collision
+        const AUTO_FIRE_RANGE = CFG.autoFireRange ?? 380;
+        const AIM_RANGE = CFG.aimRange ?? 800;
+        const BULLET_SPEED = CFG.bulletSpeed ?? 22; // faster bullets
+        const BULLET_RADIUS = CFG.bulletRadius ?? 6; // bolder bullets
+        const BULLET_LIFE = CFG.bulletLife ?? 70;
+        const PLAYER_SPEED = CFG.playerSpeed ?? 5;
+        const FIRE_RATE = CFG.fireRate ?? 130; // tuned for balance
+        const RELOAD_TIME = CFG.reloadTime ?? 2000;
+        const MAX_AMMO = CFG.maxAmmo ?? 30;
+        const PICKUP_RESPAWN_MS = CFG.pickupRespawnMs ?? 6500;
+        const SPEED_BOOST_MULTIPLIER = CFG.speedBoostMultiplier ?? 1.7;
+        const SPEED_BOOST_DURATION = CFG.speedBoostDuration ?? 3500;
+        const SHIELD_DURATION = CFG.shieldDuration ?? 4200;
+        const SHIELD_DAMAGE_MULT = CFG.shieldDamageMultiplier ?? 0.55;
+        const HEALTH_PICKUP_AMOUNT = CFG.healthPickupAmount ?? 28;
+        const BOMB_SPAWN_INTERVAL = CFG.bombSpawnIntervalMs ?? 5600;
+        const BOMB_MIN_RADIUS = CFG.bombMinRadius ?? 280;
+        const BOMB_RADIUS_VARIANCE = CFG.bombRadiusVariance ?? 100;
+        const BOMB_MIN_EXPLOSION_SPEED = CFG.bombMinExplosionSpeed ?? 300;
+        const BOMB_EXPLOSION_SPEED_VARIANCE = CFG.bombExplosionSpeedVariance ?? 160;
+        const BOMB_DAMAGE = CFG.bombDamage ?? 8;
+        const BOMB_FUSE_MIN = CFG.bombFuseMinSec ?? 0.75;
+        const BOMB_FUSE_VARIANCE = CFG.bombFuseVarianceSec ?? 0.55;
+        const BOMB_MOVE_SPEED_MIN = CFG.bombMoveSpeedMin ?? 420;
+        const BOMB_MOVE_SPEED_VARIANCE = CFG.bombMoveSpeedVariance ?? 160;
+        const BOMB_HOMING_TURN_RATE = CFG.bombHomingTurnRate ?? 2.4;
+        const BOMB_MAX_SEEK_MS = CFG.bombMaxSeekMs ?? 900;
 
         // Background stars (world-space)
         const STAR_COUNT = 240;
@@ -1105,7 +1118,7 @@
         }
 
         function maybeSpawnPulse() {
-            const PULSE_INTERVAL = 5600;
+            const PULSE_INTERVAL = BOMB_SPAWN_INTERVAL;
             if (gameState.time < gameState.nextPulseAt) return;
             gameState.nextPulseAt = gameState.time + PULSE_INTERVAL;
 
@@ -1155,31 +1168,31 @@
             const dirY0 = target.y - py;
             const len0 = Math.sqrt(dirX0 * dirX0 + dirY0 * dirY0) || 1;
 
-            const moveSpeed = 420 + Math.random() * 160;
+            const moveSpeed = BOMB_MOVE_SPEED_MIN + Math.random() * BOMB_MOVE_SPEED_VARIANCE;
 
             gameState.pulses.push({
                 x: px,
                 y: py,
                 r: 0,
-                maxR: 280 + Math.random() * 100,
-                speed: 300 + Math.random() * 160,
+                maxR: BOMB_MIN_RADIUS + Math.random() * BOMB_RADIUS_VARIANCE,
+                speed: BOMB_MIN_EXPLOSION_SPEED + Math.random() * BOMB_EXPLOSION_SPEED_VARIANCE,
                 life: 1,
                 hit: false,
                 age: 0,
-                fuse: 0.75 + Math.random() * 0.55, // seconds until detonation visuals + damage start
+                fuse: BOMB_FUSE_MIN + Math.random() * BOMB_FUSE_VARIANCE, // seconds until detonation visuals + damage start
                 moveSpeed: moveSpeed,
                 targetKind: targetIsEnemy ? 'enemy' : 'my',
                 dirX: dirX0 / len0,
                 dirY: dirY0 / len0,
-                homingTurnRate: 2.4, // rad/s, limited steering makes bombs dodgeable
-                maxSeekMs: 900 // after this, bomb continues with current momentum
+                homingTurnRate: BOMB_HOMING_TURN_RATE, // rad/s, limited steering makes bombs dodgeable
+                maxSeekMs: BOMB_MAX_SEEK_MS // after this, bomb continues with current momentum
             });
         }
 
         function updatePulses(dtSec) {
             if (!gameState.pulses.length) return false;
 
-            const PULSE_DAMAGE = 8;
+            const PULSE_DAMAGE = BOMB_DAMAGE;
             for (let i = gameState.pulses.length - 1; i >= 0; i--) {
                 const pulse = gameState.pulses[i];
                 pulse.age += dtSec;
@@ -2198,7 +2211,7 @@
             CTX.restore();
         }
 
-        // FIXED: Better obstacle drawing with 3D effect
+        // Better obstacle drawing with richer type-based materials
         function drawObstacles() {
             OBSTACLES.forEach((obs, idx) => {
                 // Shadow/depth
@@ -2207,10 +2220,32 @@
 
                 // Main block
                 const gradient = CTX.createLinearGradient(obs.x, obs.y, obs.x + obs.w, obs.y + obs.h);
-                gradient.addColorStop(0, '#2a2a4e');
-                gradient.addColorStop(1, '#1a1a2e');
+                if (obs.type === 'wall') {
+                    gradient.addColorStop(0, '#3a3a52');
+                    gradient.addColorStop(1, '#1f1f2f');
+                } else if (obs.type === 'center') {
+                    gradient.addColorStop(0, '#344a66');
+                    gradient.addColorStop(1, '#1a2738');
+                } else {
+                    gradient.addColorStop(0, '#2a2a4e');
+                    gradient.addColorStop(1, '#1a1a2e');
+                }
                 CTX.fillStyle = gradient;
                 CTX.fillRect(obs.x, obs.y, obs.w, obs.h);
+
+                // Subtle top highlight
+                CTX.fillStyle = 'rgba(255,255,255,0.06)';
+                CTX.fillRect(obs.x + 2, obs.y + 2, obs.w - 4, Math.max(2, Math.floor(obs.h * 0.08)));
+
+                // Tech panel seams
+                CTX.strokeStyle = 'rgba(120, 220, 180, 0.16)';
+                CTX.lineWidth = 1;
+                CTX.beginPath();
+                CTX.moveTo(obs.x + obs.w * 0.2, obs.y + 1);
+                CTX.lineTo(obs.x + obs.w * 0.2, obs.y + obs.h - 1);
+                CTX.moveTo(obs.x + obs.w * 0.8, obs.y + 1);
+                CTX.lineTo(obs.x + obs.w * 0.8, obs.y + obs.h - 1);
+                CTX.stroke();
 
                 // Border
                 CTX.strokeStyle = '#0f0';
