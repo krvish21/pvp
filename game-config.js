@@ -19,8 +19,8 @@ window.GAME_CONFIG = {
   // Pickups
   pickupRespawnMs: 6500,
   speedBoostMultiplier: 1.7,
-  speedBoostDuration: 3500,
-  shieldDuration: 8400,
+  speedBoostDuration: 10500,
+  shieldDuration: 10500,
   shieldDamageMultiplier: 0.55,
   healthPickupAmount: 28,
 
