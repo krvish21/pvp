@@ -132,8 +132,9 @@
 
         /* Left side joystick - positioned for left thumb comfort */
         #joystick {
-            left: 20px;
-            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 60px;
             width: 140px;
             height: 140px;
             background: rgba(0, 255, 0, 0.15);
@@ -862,6 +863,25 @@
             return (dx * dx + dy * dy) < (radius * radius);
         }
 
+        function isInHazardZone(x, y) {
+            for (const hz of HAZARDS) {
+                if (circleOverlapsRect(x, y, PLAYER_COLLISION_RADIUS * 0.95, hz)) return true;
+            }
+            return false;
+        }
+
+        function pickSafeSpawn(preferredIdx) {
+            const idxOrder = [preferredIdx].concat(
+                SPAWN_POINTS.map((_, i) => i).filter(i => i !== preferredIdx)
+            );
+            for (const idx of idxOrder) {
+                const sp = SPAWN_POINTS[idx];
+                if (sp && !isInHazardZone(sp.x, sp.y)) return sp;
+            }
+            // Fallback (should be rare)
+            return SPAWN_POINTS[preferredIdx] || SPAWN_POINTS[0];
+        }
+
         function applyHazardDamage(dtSec) {
             let damageTaken = 0;
             for (const hz of HAZARDS) {
@@ -892,10 +912,38 @@
             if (gameState.time < gameState.nextPulseAt) return;
             gameState.nextPulseAt = gameState.time + PULSE_INTERVAL;
 
-            // Spawn pulses near hazards
-            const hz = HAZARDS[Math.floor(Math.random() * HAZARDS.length)];
-            const px = hz.x + hz.w / 2;
-            const py = hz.y + hz.h / 2;
+            // Spawn bombs from random edges of the *screen* (viewport).
+            const camL = gameState.camera.x;
+            const camT = gameState.camera.y;
+            const camR = gameState.camera.x + CANVAS.width;
+            const camB = gameState.camera.y + CANVAS.height;
+
+            const edge = Math.floor(Math.random() * 4); // 0 L, 1 R, 2 T, 3 B
+            const margin = 40; // spawn slightly off-screen for drama
+
+            let px = 0;
+            let py = 0;
+            let tries = 0;
+            do {
+                tries++;
+                if (edge === 0) {
+                    px = camL - margin;
+                    py = camT + Math.random() * (camB - camT);
+                } else if (edge === 1) {
+                    px = camR + margin;
+                    py = camT + Math.random() * (camB - camT);
+                } else if (edge === 2) {
+                    px = camL + Math.random() * (camR - camL);
+                    py = camT - margin;
+                } else {
+                    px = camL + Math.random() * (camR - camL);
+                    py = camB + margin;
+                }
+
+                // Clamp into world bounds
+                px = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, px));
+                py = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, py));
+            } while (tries < 12 && Math.hypot(px - myPlayer.x, py - myPlayer.y) < 180);
 
             gameState.pulses.push({
                 x: px,
@@ -904,7 +952,9 @@
                 maxR: 420 + Math.random() * 120,
                 speed: 260 + Math.random() * 140,
                 life: 1,
-                hit: false
+                hit: false,
+                age: 0,
+                fuse: 0.35 + Math.random() * 0.45 // seconds until detonation visuals + damage start
             });
         }
 
@@ -914,21 +964,29 @@
             const PULSE_DAMAGE = 18;
             for (let i = gameState.pulses.length - 1; i >= 0; i--) {
                 const pulse = gameState.pulses[i];
-                pulse.r += pulse.speed * dtSec;
+                pulse.age += dtSec;
+
+                // Pre-detonation phase: show bomb, but don't expand or damage yet.
+                const armed = pulse.age >= pulse.fuse;
+                if (armed) {
+                    pulse.r += pulse.speed * dtSec;
+                }
 
                 const dx = myPlayer.x - pulse.x;
                 const dy = myPlayer.y - pulse.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                if (!pulse.hit && dist < pulse.r + PLAYER_SIZE * 0.25) {
+                if (armed && !pulse.hit && dist < pulse.r + PLAYER_SIZE * 0.25) {
                     pulse.hit = true;
                     myPlayer.hp -= PULSE_DAMAGE;
-                    createExplosion(myPlayer.x, myPlayer.y);
+                    createExplosion(pulse.x, pulse.y);
                     updateHUD();
                 }
 
-                pulse.life -= dtSec * 0.55;
-                if (pulse.life <= 0 || pulse.r > pulse.maxR) {
+                if (armed) {
+                    pulse.life -= dtSec * 0.55;
+                }
+                if ((armed && pulse.life <= 0) || (armed && pulse.r > pulse.maxR)) {
                     gameState.pulses.splice(i, 1);
                 }
 
@@ -948,7 +1006,7 @@
 
             // Initialize players
             const spawnIdx = gameState.isHost ? 0 : 1;
-            const spawn = SPAWN_POINTS[spawnIdx];
+            const spawn = pickSafeSpawn(spawnIdx);
             myPlayer.x = spawn.x;
             myPlayer.y = spawn.y;
             myPlayer.hp = 100;
@@ -959,8 +1017,8 @@
             myPlayer.aimAngle = 0;
 
             enemyPlayer = {
-                x: SPAWN_POINTS[spawnIdx ^ 1].x,
-                y: SPAWN_POINTS[spawnIdx ^ 1].y,
+                x: pickSafeSpawn(spawnIdx ^ 1).x,
+                y: pickSafeSpawn(spawnIdx ^ 1).y,
                 angle: 0,
                 hp: 100,
                 color: '#f00'
@@ -1371,7 +1429,12 @@
         }
 
         function respawn() {
-            const spawn = SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)];
+            let spawn = SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)];
+            let attempts = 0;
+            while (attempts < 12 && spawn && isInHazardZone(spawn.x, spawn.y)) {
+                spawn = SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)];
+                attempts++;
+            }
             myPlayer.x = spawn.x;
             myPlayer.y = spawn.y;
             myPlayer.hp = 100;
@@ -1702,8 +1765,64 @@
 
             CTX.save();
             gameState.pulses.forEach(pulse => {
+                const armed = pulse.age >= pulse.fuse;
+
+                if (!armed) {
+                    // Bomb-with-fuse visuals (pre-detonation)
+                    const fuseT = Math.max(0, Math.min(1, pulse.age / pulse.fuse));
+                    const fuseFlicker = 0.7 + 0.3 * Math.sin(gameState.time / 120 + pulse.x * 0.01 + pulse.y * 0.005);
+                    const bombSize = 10 + fuseT * 2;
+
+                    // Shadow
+                    CTX.globalAlpha = 0.35;
+                    CTX.fillStyle = '#000';
+                    CTX.beginPath();
+                    CTX.ellipse(pulse.x, pulse.y + 10, bombSize * 0.9, bombSize * 0.45, 0, 0, Math.PI * 2);
+                    CTX.fill();
+
+                    CTX.globalAlpha = 1;
+                    CTX.save();
+                    CTX.shadowBlur = 18;
+                    CTX.shadowColor = '#ff3b00';
+                    const g = CTX.createRadialGradient(
+                        pulse.x - 4, pulse.y - 4, 0,
+                        pulse.x, pulse.y, bombSize * 1.2
+                    );
+                    g.addColorStop(0, 'rgba(255, 170, 0, 0.95)');
+                    g.addColorStop(0.4, 'rgba(160, 35, 0, 0.85)');
+                    g.addColorStop(1, 'rgba(20, 5, 0, 0.95)');
+                    CTX.fillStyle = g;
+                    CTX.beginPath();
+                    CTX.arc(pulse.x, pulse.y, bombSize, 0, Math.PI * 2);
+                    CTX.fill();
+                    CTX.shadowBlur = 0;
+
+                    // Fuse line
+                    CTX.strokeStyle = 'rgba(255, 200, 80, 0.95)';
+                    CTX.lineWidth = 2;
+                    CTX.beginPath();
+                    CTX.moveTo(pulse.x + bombSize * 0.4, pulse.y - bombSize * 0.9);
+                    CTX.lineTo(pulse.x + bombSize * 0.65, pulse.y - bombSize * 1.2);
+                    CTX.stroke();
+
+                    // Burning tip
+                    CTX.shadowBlur = 30;
+                    CTX.shadowColor = '#ffcc66';
+                    CTX.globalAlpha = 0.8 + 0.2 * fuseFlicker;
+                    CTX.fillStyle = '#ffcc66';
+                    CTX.beginPath();
+                    CTX.arc(pulse.x + bombSize * 0.72, pulse.y - bombSize * 1.25, 3 + fuseFlicker * 1.2, 0, Math.PI * 2);
+                    CTX.fill();
+                    CTX.shadowBlur = 0;
+                    CTX.globalAlpha = 1;
+
+                    CTX.restore();
+                    return;
+                }
+
+                // Detonation shockwave visuals
                 const alpha = Math.max(0, Math.min(1, pulse.life));
-                CTX.globalAlpha = 0.45 * alpha;
+                CTX.globalAlpha = 0.55 * alpha;
                 CTX.strokeStyle = '#00f0ff';
                 CTX.lineWidth = 2;
                 CTX.shadowBlur = 30;
@@ -1712,11 +1831,20 @@
                 CTX.arc(pulse.x, pulse.y, pulse.r, 0, Math.PI * 2);
                 CTX.stroke();
 
-                CTX.globalAlpha = 0.15 * alpha;
+                // Secondary ring
+                CTX.globalAlpha = 0.18 * alpha;
                 CTX.lineWidth = 1;
                 CTX.beginPath();
                 CTX.arc(pulse.x, pulse.y, Math.max(6, pulse.r * 0.65), 0, Math.PI * 2);
                 CTX.stroke();
+
+                // Center flash
+                CTX.globalAlpha = 0.25 * alpha;
+                CTX.fillStyle = '#ffffff';
+                CTX.beginPath();
+                CTX.arc(pulse.x, pulse.y, Math.max(3, 6 * alpha), 0, Math.PI * 2);
+                CTX.fill();
+
                 CTX.shadowBlur = 0;
                 CTX.globalAlpha = 1;
             });
@@ -1767,48 +1895,96 @@
                 CTX.fillRect(-25, -45, 50 * (p.hp / 100), 8);
             }
 
+            // Small world-space shadow
+            CTX.shadowBlur = 0;
+            CTX.globalAlpha = 0.35;
+            CTX.fillStyle = '#000';
+            CTX.beginPath();
+            CTX.ellipse(0, 22, 14, 6, 0, 0, Math.PI * 2);
+            CTX.fill();
+            CTX.globalAlpha = 1;
+
             CTX.rotate(p.angle);
+
+            // Character sprite (simple procedural “soldier”)
+            function capsule(x, y, w, h, r) {
+                const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+                CTX.beginPath();
+                CTX.moveTo(x + rr, y);
+                CTX.arcTo(x + w, y, x + w, y + h, rr);
+                CTX.arcTo(x + w, y + h, x, y + h, rr);
+                CTX.arcTo(x, y + h, x, y, rr);
+                CTX.arcTo(x, y, x + w, y, rr);
+                CTX.closePath();
+                CTX.fill();
+            }
 
             // Glow effect
             CTX.shadowBlur = 25;
             CTX.shadowColor = color;
 
-            // Body
+            // Torso
             CTX.fillStyle = color;
-            CTX.fillRect(-20, -20, 40, 40);
+            capsule(-12, -6, 24, 28, 8);
 
-            // Inner detail
+            // Core
+            CTX.shadowBlur = 0;
             CTX.fillStyle = '#000';
-            CTX.fillRect(-12, -12, 24, 24);
+            capsule(-8, -2, 16, 20, 7);
             CTX.fillStyle = color;
-            CTX.fillRect(-8, -8, 16, 16);
+            capsule(-6, 0, 12, 16, 6);
 
-            // Gun/barrel
-            CTX.fillStyle = '#fff';
-            CTX.fillRect(15, -4, 25, 8);
-
-            // Gun detail
-            CTX.fillStyle = '#888';
-            CTX.fillRect(20, -2, 15, 4);
-
-            CTX.restore();
-
-            // Direction indicator (triangle pointing in facing direction)
-            CTX.save();
-            CTX.translate(p.x, p.y);
-            CTX.rotate(p.angle);
+            // Helmet / head
+            CTX.shadowBlur = 18;
+            CTX.shadowColor = color;
             CTX.fillStyle = color;
-            CTX.globalAlpha = 0.3;
             CTX.beginPath();
-            CTX.moveTo(35, 0);
-            CTX.lineTo(50, -10);
-            CTX.lineTo(50, 10);
+            CTX.arc(0, -18, 10, 0, Math.PI * 2);
+            CTX.fill();
+
+            // Visor
+            CTX.shadowBlur = 0;
+            CTX.fillStyle = '#020';
+            capsule(-6, -20, 12, 7, 3);
+            CTX.fillStyle = '#cfff00';
+            CTX.globalAlpha = isEnemy ? 0.7 : 0.9;
+            capsule(-2.5, -18.5, 5, 2.8, 1.5);
+            CTX.globalAlpha = 1;
+
+            // Legs
+            CTX.shadowBlur = 0;
+            CTX.fillStyle = color;
+            capsule(-6, 8, 8, 18, 5);
+            capsule(0, 8, 8, 18, 5);
+
+            // Aim gun direction can differ from movement direction.
+            const gunAngle = (typeof p.aimAngle === 'number') ? p.aimAngle : p.angle;
+            const gunDiff = gunAngle - p.angle;
+            CTX.save();
+            CTX.rotate(gunDiff);
+
+            // Gun body
+            CTX.shadowBlur = 14;
+            CTX.shadowColor = color;
+            CTX.fillStyle = '#f7f7f7';
+            capsule(10, -4, 22, 8, 4);
+            CTX.fillStyle = '#888';
+            capsule(14, -2, 14, 4, 2);
+
+            // Muzzle
+            CTX.shadowBlur = 30;
+            CTX.shadowColor = '#fff';
+            CTX.fillStyle = '#fff';
+            CTX.beginPath();
+            CTX.moveTo(32, -3);
+            CTX.lineTo(34, 0);
+            CTX.lineTo(32, 3);
             CTX.closePath();
             CTX.fill();
+
             CTX.restore();
 
-            CTX.shadowBlur = 0;
-            CTX.globalAlpha = 1;
+            CTX.restore();
         }
 
         function drawMinimap() {
