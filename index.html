@@ -327,6 +327,101 @@
             display: none;
             z-index: 100;
         }
+
+        /* In-game chat */
+        #chatPanel {
+            position: absolute;
+            left: 12px;
+            bottom: 12px;
+            width: min(360px, 86vw);
+            z-index: 120;
+            pointer-events: auto;
+        }
+
+        #chatLog {
+            height: 120px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(0, 255, 120, 0.45);
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 8px;
+            font-size: 0.8em;
+            line-height: 1.3;
+        }
+
+        .chat-msg {
+            margin: 2px 0;
+            color: #cfe;
+            word-break: break-word;
+        }
+
+        .chat-system {
+            color: #ffde7a;
+        }
+
+        .chat-me {
+            color: #7fffb5;
+        }
+
+        #chatInputRow {
+            display: flex;
+            gap: 6px;
+        }
+
+        #chatInput {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.75);
+            border: 1px solid rgba(0, 255, 120, 0.55);
+            color: #d9ffe9;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-family: inherit;
+            font-size: 0.86em;
+            outline: none;
+        }
+
+        #chatSendBtn {
+            min-width: 64px;
+            padding: 8px 10px;
+            font-size: 0.8em;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 255, 120, 0.7);
+            background: rgba(0, 120, 50, 0.25);
+            color: #b8ffd8;
+            font-family: inherit;
+        }
+
+        #pauseBtn {
+            position: absolute;
+            top: 10px;
+            right: 145px;
+            z-index: 130;
+            pointer-events: auto;
+            min-width: 82px;
+            padding: 6px 10px;
+            font-size: 0.75em;
+            border: 1px solid rgba(0, 255, 120, 0.65);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.55);
+            color: #b8ffd8;
+            font-family: inherit;
+        }
+
+        #pauseOverlay {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.45);
+            color: #e6ffe6;
+            font-size: 1.35em;
+            text-align: center;
+            z-index: 125;
+            pointer-events: none;
+            text-shadow: 0 0 12px rgba(0, 255, 120, 0.5);
+        }
     </style>
 <base target="_blank">
 </head>
@@ -385,6 +480,16 @@
 
             <canvas id="minimap"></canvas>
             <div id="killFeed"></div>
+            <button id="pauseBtn" type="button">PAUSE</button>
+            <div id="pauseOverlay">PAUSED<br><span style="font-size:0.7em; opacity:0.85;">Either player can resume</span></div>
+
+            <div id="chatPanel">
+                <div id="chatLog"></div>
+                <div id="chatInputRow">
+                    <input id="chatInput" type="text" maxlength="120" placeholder="Type message..." autocomplete="off">
+                    <button id="chatSendBtn" type="button">SEND</button>
+                </div>
+            </div>
 
             <!-- FIXED: Properly positioned mobile controls -->
             <div id="joystick" class="controls">
@@ -427,6 +532,7 @@
         const SPEED_BOOST_DURATION = 3500;
         const SHIELD_DURATION = 4200;
         const SHIELD_DAMAGE_MULT = 0.55;
+        const HEALTH_PICKUP_AMOUNT = 28;
 
         // Background stars (world-space)
         const STAR_COUNT = 240;
@@ -466,6 +572,8 @@
             camera: { x: 0, y: 0 },
             isHost: false,
             gameStarted: false,
+            paused: false,
+            pausedBy: null,
             myId: null,
             peerId: null,
             reconnectAttempts: 0,
@@ -502,9 +610,55 @@
         let joystickFiring = false; // one-hand mode: shooting while thumb is on joystick
         let fireButtonFiring = false; // explicit fire button (optional)
         let pingInterval = null;
+        const chatLog = document.getElementById('chatLog');
+        const chatInput = document.getElementById('chatInput');
+        const chatSendBtn = document.getElementById('chatSendBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const pauseOverlay = document.getElementById('pauseOverlay');
 
         function syncFirePressed() {
             firePressed = joystickFiring || fireButtonFiring;
+        }
+
+        function addChatMessage(text, role = 'other') {
+            if (!chatLog) return;
+            const msg = document.createElement('div');
+            msg.className = `chat-msg ${role === 'system' ? 'chat-system' : ''} ${role === 'me' ? 'chat-me' : ''}`;
+            msg.textContent = text;
+            chatLog.appendChild(msg);
+            while (chatLog.children.length > 80) {
+                chatLog.removeChild(chatLog.firstChild);
+            }
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        function sendChat() {
+            if (!chatInput) return;
+            const raw = chatInput.value || '';
+            const text = raw.trim();
+            if (!text) return;
+            const safeText = text.slice(0, 120);
+            addChatMessage(`You: ${safeText}`, 'me');
+            send({ type: 'chat', text: safeText });
+            chatInput.value = '';
+        }
+
+        function setPauseState(paused, source = 'system', broadcast = false) {
+            gameState.paused = !!paused;
+            gameState.pausedBy = source;
+            if (pauseOverlay) {
+                pauseOverlay.style.display = gameState.paused ? 'flex' : 'none';
+                if (gameState.paused) {
+                    const who = source === 'me' ? 'You paused the game' : (source === 'enemy' ? 'Enemy paused the game' : 'Game paused');
+                    pauseOverlay.innerHTML = `${who}<br><span style="font-size:0.7em; opacity:0.85;">Either player can resume</span>`;
+                }
+            }
+            if (pauseBtn) {
+                pauseBtn.textContent = gameState.paused ? 'RESUME' : 'PAUSE';
+            }
+            if (broadcast) {
+                send({ type: 'pauseToggle', paused: gameState.paused });
+            }
         }
 
         // Resize canvas
@@ -666,6 +820,8 @@
                         enemyPlayer.y = data.y;
                         enemyPlayer.angle = data.angle;
                         enemyPlayer.hp = data.hp;
+                        enemyPlayer.speedBoostUntil = data.speedBoostUntil || 0;
+                        enemyPlayer.shieldUntil = data.shieldUntil || 0;
                     }
                     break;
                 case 'bullet':
@@ -695,6 +851,15 @@
                     break;
                 case 'killFeed':
                     addKillFeed(data.text);
+                    break;
+                case 'chat':
+                    if (typeof data.text === 'string' && data.text.trim()) {
+                        addChatMessage(`Enemy: ${data.text.slice(0, 120)}`, 'other');
+                    }
+                    break;
+                case 'pauseToggle':
+                    setPauseState(!!data.paused, 'enemy', false);
+                    addChatMessage(data.paused ? 'Enemy paused the game.' : 'Enemy resumed the game.', 'system');
                     break;
             }
         }
@@ -903,6 +1068,7 @@
             gameState.pickups = [];
             spawnPickup('speed');
             spawnPickup('shield');
+            spawnPickup('health');
         }
 
         function applyHazardDamage(dtSec) {
@@ -988,8 +1154,8 @@
                 x: px,
                 y: py,
                 r: 0,
-                maxR: 360 + Math.random() * 140,
-                speed: 340 + Math.random() * 220,
+                maxR: 280 + Math.random() * 100,
+                speed: 300 + Math.random() * 160,
                 life: 1,
                 hit: false,
                 age: 0,
@@ -1006,7 +1172,7 @@
         function updatePulses(dtSec) {
             if (!gameState.pulses.length) return false;
 
-            const PULSE_DAMAGE = 12;
+            const PULSE_DAMAGE = 8;
             for (let i = gameState.pulses.length - 1; i >= 0; i--) {
                 const pulse = gameState.pulses[i];
                 pulse.age += dtSec;
@@ -1094,7 +1260,9 @@
                 y: pickSafeSpawn(spawnIdx ^ 1).y,
                 angle: 0,
                 hp: 100,
-                color: '#f00'
+                color: '#f00',
+                speedBoostUntil: 0,
+                shieldUntil: 0
             };
 
             gameState.players[gameState.myId] = myPlayer;
@@ -1104,9 +1272,12 @@
             gameState.time = 0;
             gameState.pulses = [];
             gameState.nextPulseAt = 1000;
+            setPauseState(false, 'system', false);
             myPlayer.speedBoostUntil = 0;
             myPlayer.shieldUntil = 0;
             setupPickups();
+            if (chatLog) chatLog.innerHTML = '';
+            addChatMessage('Connected. Chat online.', 'system');
 
             updateHUD();
             lastTime = performance.now();
@@ -1176,6 +1347,36 @@
             syncFirePressed();
         });
 
+        if (chatSendBtn) {
+            chatSendBtn.addEventListener('click', () => sendChat());
+        }
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', () => {
+                if (!gameState.gameStarted) return;
+                const willPause = !gameState.paused;
+                setPauseState(willPause, 'me', true);
+                addChatMessage(willPause ? 'You paused the game.' : 'You resumed the game.', 'system');
+            });
+        }
+        if (chatInput) {
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendChat();
+                }
+            });
+            chatInput.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+            chatInput.addEventListener('mousedown', (e) => e.stopPropagation());
+        }
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'p' || e.key === 'P') && gameState.gameStarted) {
+                if (document.activeElement === chatInput) return;
+                const willPause = !gameState.paused;
+                setPauseState(willPause, 'me', true);
+                addChatMessage(willPause ? 'You paused the game.' : 'You resumed the game.', 'system');
+            }
+        });
+
         function updateJoystick(clientX, clientY) {
             const dx = clientX - joystickCenter.x;
             const dy = clientY - joystickCenter.y;
@@ -1209,6 +1410,7 @@
         // Game logic
         function update(dt) {
             if (!gameState.gameStarted) return;
+            if (gameState.paused) return;
 
             const dtSec = dt / 1000;
             gameState.time += dt;
@@ -1275,6 +1477,10 @@
                     } else if (pk.type === 'shield') {
                         myPlayer.shieldUntil = nowMs + SHIELD_DURATION;
                         addKillFeed('Shield acquired');
+                    } else if (pk.type === 'health') {
+                        myPlayer.hp = Math.min(myPlayer.maxHp, myPlayer.hp + HEALTH_PICKUP_AMOUNT);
+                        updateHUD();
+                        addKillFeed(`Health +${HEALTH_PICKUP_AMOUNT}`);
                     }
                     gameState.pickups.splice(i, 1);
                     setTimeout(() => spawnPickup(pk.type), PICKUP_RESPAWN_MS);
@@ -1393,7 +1599,9 @@
                     x: myPlayer.x,
                     y: myPlayer.y,
                     angle: myPlayer.angle,
-                    hp: myPlayer.hp
+                    hp: myPlayer.hp,
+                    speedBoostUntil: myPlayer.speedBoostUntil || 0,
+                    shieldUntil: myPlayer.shieldUntil || 0
                 });
             }
         }
@@ -1961,6 +2169,9 @@
                 if (pk.type === 'speed') {
                     CTX.shadowColor = '#ffd400';
                     CTX.fillStyle = '#ffd400';
+                } else if (pk.type === 'health') {
+                    CTX.shadowColor = '#ff4d4d';
+                    CTX.fillStyle = '#ff4d4d';
                 } else {
                     CTX.shadowColor = '#00d7ff';
                     CTX.fillStyle = '#00d7ff';
@@ -1978,21 +2189,7 @@
                 CTX.font = '700 13px Courier New';
                 CTX.textAlign = 'center';
                 CTX.textBaseline = 'middle';
-                CTX.fillText(pk.type === 'speed' ? '>>' : 'S', pk.x, pk.y);
-            }
-
-            // Active shield ring around player
-            if (now < myPlayer.shieldUntil && myPlayer.hp > 0) {
-                CTX.globalAlpha = 0.45;
-                CTX.strokeStyle = '#00d7ff';
-                CTX.lineWidth = 3;
-                CTX.shadowBlur = 22;
-                CTX.shadowColor = '#00d7ff';
-                CTX.beginPath();
-                CTX.arc(myPlayer.x, myPlayer.y, PLAYER_SIZE + 8, 0, Math.PI * 2);
-                CTX.stroke();
-                CTX.shadowBlur = 0;
-                CTX.globalAlpha = 1;
+                CTX.fillText(pk.type === 'speed' ? '>>' : (pk.type === 'health' ? '+' : 'S'), pk.x, pk.y);
             }
 
             CTX.restore();
@@ -2031,6 +2228,7 @@
 
         // FIXED: Better player drawing with direction indicator and health bar
         function drawPlayer(p, color, isEnemy) {
+            const now = Date.now();
             CTX.save();
             CTX.translate(p.x, p.y);
 
@@ -2077,6 +2275,41 @@
 
             CTX.restore();
 
+            // Status visuals on player
+            if (now < (p.speedBoostUntil || 0)) {
+                CTX.save();
+                CTX.globalAlpha = 0.42;
+                CTX.strokeStyle = '#ffd400';
+                CTX.lineWidth = 2;
+                CTX.shadowBlur = 14;
+                CTX.shadowColor = '#ffd400';
+                CTX.beginPath();
+                CTX.arc(p.x, p.y, PLAYER_SIZE + 4 + Math.sin(gameState.time / 140) * 2, 0, Math.PI * 2);
+                CTX.stroke();
+                CTX.shadowBlur = 0;
+                CTX.globalAlpha = 1;
+                CTX.restore();
+            }
+
+            if (now < (p.shieldUntil || 0)) {
+                CTX.save();
+                CTX.globalAlpha = 0.45;
+                CTX.strokeStyle = '#00d7ff';
+                CTX.lineWidth = 3;
+                CTX.shadowBlur = 22;
+                CTX.shadowColor = '#00d7ff';
+                CTX.beginPath();
+                CTX.arc(p.x, p.y, PLAYER_SIZE + 9, 0, Math.PI * 2);
+                CTX.stroke();
+                CTX.globalAlpha = 0.18;
+                CTX.beginPath();
+                CTX.arc(p.x, p.y, PLAYER_SIZE + 14, 0, Math.PI * 2);
+                CTX.stroke();
+                CTX.shadowBlur = 0;
+                CTX.globalAlpha = 1;
+                CTX.restore();
+            }
+
             // Direction indicator (triangle pointing in facing direction)
             CTX.save();
             CTX.translate(p.x, p.y);
@@ -2114,7 +2347,7 @@
 
             // Pickups
             gameState.pickups.forEach(pk => {
-                MINI_CTX.fillStyle = pk.type === 'speed' ? '#ffd400' : '#00d7ff';
+                MINI_CTX.fillStyle = pk.type === 'speed' ? '#ffd400' : (pk.type === 'health' ? '#ff4d4d' : '#00d7ff');
                 MINI_CTX.beginPath();
                 MINI_CTX.arc(pk.x * scale, pk.y * scale, 2.5, 0, Math.PI * 2);
                 MINI_CTX.fill();
@@ -2174,11 +2407,13 @@
 
         function endGame(reason) {
             gameState.gameStarted = false;
+            setPauseState(false, 'system', false);
             stopPing();
             document.getElementById('gameUI').classList.add('hidden');
             document.getElementById('gameOverScreen').classList.remove('hidden');
             document.getElementById('winnerText').textContent = reason || 'GAME OVER';
             document.getElementById('finalScore').textContent = `Kills: ${myPlayer.kills} | Deaths: ${myPlayer.deaths}`;
+            addChatMessage('Match ended.', 'system');
         }
 
         function restartGame() {
@@ -2190,6 +2425,7 @@
         // Prevent scrolling on game
         document.addEventListener('touchmove', (e) => {
             if (gameState.gameStarted) {
+                if (document.activeElement === chatInput || (chatLog && chatLog.contains(e.target))) return;
                 e.preventDefault();
             }
         }, { passive: false });
