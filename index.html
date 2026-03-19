@@ -413,13 +413,13 @@
         const WORLD_SIZE = 3200;
         const PLAYER_SIZE = 30;
         const PLAYER_COLLISION_RADIUS = 20; // smaller than draw size to avoid “sticky” collision
-        const AUTO_FIRE_RANGE = 460;
-        const AIM_RANGE = 900;
+        const AUTO_FIRE_RANGE = 380;
+        const AIM_RANGE = 800;
         const BULLET_SPEED = 22; // faster bullets
         const BULLET_RADIUS = 6; // bolder bullets
         const BULLET_LIFE = 70;
         const PLAYER_SPEED = 5;
-        const FIRE_RATE = 110; // faster rate-of-fire
+        const FIRE_RATE = 130; // tuned for balance
         const RELOAD_TIME = 2000;
         const MAX_AMMO = 30;
 
@@ -440,43 +440,17 @@
         ];
 
         // FIXED: Proper obstacles with collision
-        // Some obstacles are moving (updated every frame).
+        // Few obstacles for better balance/fun.
         let OBSTACLES = [
-            { x: 960, y: 960, w: 192, h: 192, type: 'box' },
-            { x: 2080, y: 960, w: 192, h: 192, type: 'box' },
-            { x: 960, y: 2080, w: 192, h: 192, type: 'box' },
-            { x: 2080, y: 2080, w: 192, h: 192, type: 'box' },
-            { x: 1520, y: 1520, w: 160, h: 160, type: 'center' },
-            { x: 400, y: 1600, w: 128, h: 400, type: 'wall' },
-            { x: 2672, y: 1600, w: 128, h: 400, type: 'wall' },
-            { x: 1600, y: 400, w: 400, h: 128, type: 'wall' },
-            { x: 1600, y: 2672, w: 400, h: 128, type: 'wall' },
-            { x: 720, y: 720, w: 96, h: 96, type: 'small' },
-            { x: 2480, y: 720, w: 96, h: 96, type: 'small' },
-            { x: 720, y: 2480, w: 96, h: 96, type: 'small' },
-            { x: 2480, y: 2480, w: 96, h: 96, type: 'small' },
-
-            // Extra cover to make movement lanes more interesting
-            { x: 1216, y: 672, w: 128, h: 224, type: 'cover' },
-            { x: 1856, y: 672, w: 128, h: 224, type: 'cover' },
-            { x: 1216, y: 2304, w: 128, h: 224, type: 'cover' },
-            { x: 1856, y: 2304, w: 128, h: 224, type: 'cover' },
-
-            // Moving obstructions (dynamic cover)
-            { x: 1216, y: 1440, w: 288, h: 64, type: 'moving',
-              baseX: 1216, baseY: 1440, motion: { axis: 'x', amp: 416, period: 2400, phase: 0 } },
-            { x: 1792, y: 1088, w: 64, h: 352, type: 'moving',
-              baseX: 1792, baseY: 1088, motion: { axis: 'y', amp: 512, period: 3000, phase: 1.4 } }
+            { x: 1180, y: 1180, w: 240, h: 160, type: 'box' },
+            { x: 1780, y: 1180, w: 240, h: 160, type: 'box' },
+            { x: 1400, y: 1400, w: 160, h: 160, type: 'center' },
+            { x: 600, y: 1500, w: 120, h: 520, type: 'wall' },
+            { x: 2480, y: 1500, w: 120, h: 520, type: 'wall' }
         ];
 
-        // Hazards (damage zones that are NOT solid for bullets)
-        const HAZARDS = [
-            { x: 1312, y: 496, w: 352, h: 144, kind: 'fire', dps: 28 },
-            { x: 448, y: 1408, w: 256, h: 256, kind: 'toxic', dps: 16 },
-            { x: 2496, y: 1408, w: 256, h: 256, kind: 'toxic', dps: 16 },
-            { x: 1408, y: 2592, w: 384, h: 144, kind: 'electric', dps: 22 },
-            { x: 1376, y: 1568, w: 192, h: 192, kind: 'fire', dps: 34 }
-        ];
+        // Hazards removed.
+        const HAZARDS = [];
 
         // Game State
         let gameState = {
@@ -883,6 +857,7 @@
         }
 
         function applyHazardDamage(dtSec) {
+            if (!HAZARDS.length) return false;
             let damageTaken = 0;
             for (const hz of HAZARDS) {
                 if (!circleOverlapsRect(myPlayer.x, myPlayer.y, PLAYER_SIZE * 0.9, hz)) continue;
@@ -908,7 +883,7 @@
         }
 
         function maybeSpawnPulse() {
-            const PULSE_INTERVAL = 4200;
+            const PULSE_INTERVAL = 5600;
             if (gameState.time < gameState.nextPulseAt) return;
             gameState.nextPulseAt = gameState.time + PULSE_INTERVAL;
 
@@ -943,32 +918,64 @@
                 // Clamp into world bounds
                 px = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, px));
                 py = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, py));
-            } while (tries < 12 && Math.hypot(px - myPlayer.x, py - myPlayer.y) < 180);
+                const dMy = Math.hypot(px - myPlayer.x, py - myPlayer.y);
+                const dEn = (enemyPlayer && enemyPlayer.hp > 0) ? Math.hypot(px - enemyPlayer.x, py - enemyPlayer.y) : Infinity;
+                // Avoid spawning too close to either player (keeps it fair)
+                if (Math.min(dMy, dEn) >= 260) break;
+            } while (tries < 12);
+
+            const targetIsEnemy = (enemyPlayer && enemyPlayer.hp > 0) ?
+                (Math.hypot(px - myPlayer.x, py - myPlayer.y) > Math.hypot(px - enemyPlayer.x, py - enemyPlayer.y)) :
+                false;
+
+            const target = targetIsEnemy ? enemyPlayer : myPlayer;
+            const dirX0 = target.x - px;
+            const dirY0 = target.y - py;
+            const len0 = Math.sqrt(dirX0 * dirX0 + dirY0 * dirY0) || 1;
+
+            const moveSpeed = 420 + Math.random() * 160;
 
             gameState.pulses.push({
                 x: px,
                 y: py,
                 r: 0,
-                maxR: 420 + Math.random() * 120,
-                speed: 260 + Math.random() * 140,
+                maxR: 360 + Math.random() * 140,
+                speed: 340 + Math.random() * 220,
                 life: 1,
                 hit: false,
                 age: 0,
-                fuse: 0.35 + Math.random() * 0.45 // seconds until detonation visuals + damage start
+                fuse: 0.75 + Math.random() * 0.55, // seconds until detonation visuals + damage start
+                moveSpeed: moveSpeed,
+                targetKind: targetIsEnemy ? 'enemy' : 'my',
+                dirX: dirX0 / len0,
+                dirY: dirY0 / len0
             });
         }
 
         function updatePulses(dtSec) {
             if (!gameState.pulses.length) return false;
 
-            const PULSE_DAMAGE = 18;
+            const PULSE_DAMAGE = 12;
             for (let i = gameState.pulses.length - 1; i >= 0; i--) {
                 const pulse = gameState.pulses[i];
                 pulse.age += dtSec;
 
                 // Pre-detonation phase: show bomb, but don't expand or damage yet.
                 const armed = pulse.age >= pulse.fuse;
-                if (armed) {
+                if (!armed) {
+                    // Move bomb toward its current target before it detonates.
+                    const tx = (pulse.targetKind === 'enemy' && enemyPlayer && enemyPlayer.hp > 0) ? enemyPlayer.x : myPlayer.x;
+                    const ty = (pulse.targetKind === 'enemy' && enemyPlayer && enemyPlayer.hp > 0) ? enemyPlayer.y : myPlayer.y;
+                    const dxT = tx - pulse.x;
+                    const dyT = ty - pulse.y;
+                    const lenT = Math.sqrt(dxT * dxT + dyT * dyT) || 1;
+                    const nx = dxT / lenT;
+                    const ny = dyT / lenT;
+
+                    const ms = pulse.moveSpeed || 500;
+                    pulse.x = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, pulse.x + nx * ms * dtSec));
+                    pulse.y = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, pulse.y + ny * ms * dtSec));
+                } else {
                     pulse.r += pulse.speed * dtSec;
                 }
 
@@ -976,7 +983,7 @@
                 const dy = myPlayer.y - pulse.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                if (armed && !pulse.hit && dist < pulse.r + PLAYER_SIZE * 0.25) {
+                if (armed && !pulse.hit && dist < pulse.r + PLAYER_COLLISION_RADIUS * 0.2) {
                     pulse.hit = true;
                     myPlayer.hp -= PULSE_DAMAGE;
                     createExplosion(pulse.x, pulse.y);
@@ -1181,7 +1188,7 @@
             }
 
             // Hazards & pulses (damage zones)
-            if (applyHazardDamage(dtSec)) return;
+            // hazards disabled
             maybeSpawnPulse();
             if (updatePulses(dtSec)) return;
 
@@ -1528,7 +1535,6 @@
             drawObstacles();
 
             // Hazards & pulses (keep the map active)
-            drawHazards();
             drawPulses();
 
             // Bullets
@@ -1906,85 +1912,46 @@
 
             CTX.rotate(p.angle);
 
-            // Character sprite (simple procedural “soldier”)
-            function capsule(x, y, w, h, r) {
-                const rr = Math.max(0, Math.min(r, w / 2, h / 2));
-                CTX.beginPath();
-                CTX.moveTo(x + rr, y);
-                CTX.arcTo(x + w, y, x + w, y + h, rr);
-                CTX.arcTo(x + w, y + h, x, y + h, rr);
-                CTX.arcTo(x, y + h, x, y, rr);
-                CTX.arcTo(x, y, x + w, y, rr);
-                CTX.closePath();
-                CTX.fill();
-            }
-
             // Glow effect
             CTX.shadowBlur = 25;
             CTX.shadowColor = color;
 
-            // Torso
+            // Body (box player)
             CTX.fillStyle = color;
-            capsule(-12, -6, 24, 28, 8);
+            CTX.fillRect(-20, -20, 40, 40);
 
-            // Core
-            CTX.shadowBlur = 0;
+            // Inner detail
             CTX.fillStyle = '#000';
-            capsule(-8, -2, 16, 20, 7);
+            CTX.fillRect(-12, -12, 24, 24);
             CTX.fillStyle = color;
-            capsule(-6, 0, 12, 16, 6);
+            CTX.fillRect(-8, -8, 16, 16);
 
-            // Helmet / head
-            CTX.shadowBlur = 18;
-            CTX.shadowColor = color;
-            CTX.fillStyle = color;
-            CTX.beginPath();
-            CTX.arc(0, -18, 10, 0, Math.PI * 2);
-            CTX.fill();
-
-            // Visor
-            CTX.shadowBlur = 0;
-            CTX.fillStyle = '#020';
-            capsule(-6, -20, 12, 7, 3);
-            CTX.fillStyle = '#cfff00';
-            CTX.globalAlpha = isEnemy ? 0.7 : 0.9;
-            capsule(-2.5, -18.5, 5, 2.8, 1.5);
-            CTX.globalAlpha = 1;
-
-            // Legs
-            CTX.shadowBlur = 0;
-            CTX.fillStyle = color;
-            capsule(-6, 8, 8, 18, 5);
-            capsule(0, 8, 8, 18, 5);
-
-            // Aim gun direction can differ from movement direction.
-            const gunAngle = (typeof p.aimAngle === 'number') ? p.aimAngle : p.angle;
-            const gunDiff = gunAngle - p.angle;
-            CTX.save();
-            CTX.rotate(gunDiff);
-
-            // Gun body
-            CTX.shadowBlur = 14;
-            CTX.shadowColor = color;
-            CTX.fillStyle = '#f7f7f7';
-            capsule(10, -4, 22, 8, 4);
-            CTX.fillStyle = '#888';
-            capsule(14, -2, 14, 4, 2);
-
-            // Muzzle
-            CTX.shadowBlur = 30;
-            CTX.shadowColor = '#fff';
+            // Gun/barrel
             CTX.fillStyle = '#fff';
+            CTX.fillRect(15, -4, 25, 8);
+
+            // Gun detail
+            CTX.fillStyle = '#888';
+            CTX.fillRect(20, -2, 15, 4);
+
+            CTX.restore();
+
+            // Direction indicator (triangle pointing in facing direction)
+            CTX.save();
+            CTX.translate(p.x, p.y);
+            CTX.rotate(p.angle);
+            CTX.fillStyle = color;
+            CTX.globalAlpha = 0.3;
             CTX.beginPath();
-            CTX.moveTo(32, -3);
-            CTX.lineTo(34, 0);
-            CTX.lineTo(32, 3);
+            CTX.moveTo(35, 0);
+            CTX.lineTo(50, -10);
+            CTX.lineTo(50, 10);
             CTX.closePath();
             CTX.fill();
-
             CTX.restore();
 
-            CTX.restore();
+            CTX.shadowBlur = 0;
+            CTX.globalAlpha = 1;
         }
 
         function drawMinimap() {
@@ -2002,22 +1969,6 @@
                     obs.w * scale,
                     obs.h * scale
                 );
-            });
-
-            // Draw hazards on minimap
-            HAZARDS.forEach(hz => {
-                let c = '#ff8800';
-                if (hz.kind === 'electric') c = '#00f0ff';
-                if (hz.kind === 'toxic') c = '#35ff7a';
-                MINI_CTX.fillStyle = c;
-                MINI_CTX.globalAlpha = 0.7;
-                MINI_CTX.fillRect(
-                    hz.x * scale,
-                    hz.y * scale,
-                    hz.w * scale,
-                    hz.h * scale
-                );
-                MINI_CTX.globalAlpha = 1;
             });
 
             // Players
