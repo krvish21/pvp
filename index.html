@@ -409,8 +409,11 @@
         const MINIMAP = document.getElementById('minimap');
         const MINI_CTX = MINIMAP.getContext('2d');
 
-        const WORLD_SIZE = 2000;
+        const WORLD_SIZE = 3200;
         const PLAYER_SIZE = 30;
+        const PLAYER_COLLISION_RADIUS = 20; // smaller than draw size to avoid “sticky” collision
+        const AUTO_FIRE_RANGE = 460;
+        const AIM_RANGE = 900;
         const BULLET_SPEED = 22; // faster bullets
         const BULLET_RADIUS = 6; // bolder bullets
         const BULLET_LIFE = 70;
@@ -419,50 +422,59 @@
         const RELOAD_TIME = 2000;
         const MAX_AMMO = 30;
 
+        // Background stars (world-space)
+        const STAR_COUNT = 240;
+        const STARS = Array.from({ length: STAR_COUNT }, () => ({
+            x: Math.random() * WORLD_SIZE,
+            y: Math.random() * WORLD_SIZE,
+            r: Math.random() * 1.6 + 0.2,
+            a: Math.random() * 0.5 + 0.25
+        }));
+
         // FIXED: Better spawn points with clear sight lines
         const SPAWN_POINTS = [
-            { x: 300, y: 300 }, { x: 1700, y: 1700 },
-            { x: 300, y: 1700 }, { x: 1700, y: 300 },
-            { x: 1000, y: 300 }, { x: 1000, y: 1700 }
+            { x: 480, y: 480 }, { x: 2720, y: 2720 },
+            { x: 480, y: 2720 }, { x: 2720, y: 480 },
+            { x: 1600, y: 480 }, { x: 1600, y: 2720 }
         ];
 
         // FIXED: Proper obstacles with collision
         // Some obstacles are moving (updated every frame).
         let OBSTACLES = [
-            { x: 600, y: 600, w: 120, h: 120, type: 'box' },
-            { x: 1300, y: 600, w: 120, h: 120, type: 'box' },
-            { x: 600, y: 1300, w: 120, h: 120, type: 'box' },
-            { x: 1300, y: 1300, w: 120, h: 120, type: 'box' },
-            { x: 950, y: 950, w: 100, h: 100, type: 'center' },
-            { x: 250, y: 1000, w: 80, h: 250, type: 'wall' },
-            { x: 1670, y: 1000, w: 80, h: 250, type: 'wall' },
-            { x: 1000, y: 250, w: 250, h: 80, type: 'wall' },
-            { x: 1000, y: 1670, w: 250, h: 80, type: 'wall' },
-            { x: 450, y: 450, w: 60, h: 60, type: 'small' },
-            { x: 1550, y: 450, w: 60, h: 60, type: 'small' },
-            { x: 450, y: 1550, w: 60, h: 60, type: 'small' },
-            { x: 1550, y: 1550, w: 60, h: 60, type: 'small' },
+            { x: 960, y: 960, w: 192, h: 192, type: 'box' },
+            { x: 2080, y: 960, w: 192, h: 192, type: 'box' },
+            { x: 960, y: 2080, w: 192, h: 192, type: 'box' },
+            { x: 2080, y: 2080, w: 192, h: 192, type: 'box' },
+            { x: 1520, y: 1520, w: 160, h: 160, type: 'center' },
+            { x: 400, y: 1600, w: 128, h: 400, type: 'wall' },
+            { x: 2672, y: 1600, w: 128, h: 400, type: 'wall' },
+            { x: 1600, y: 400, w: 400, h: 128, type: 'wall' },
+            { x: 1600, y: 2672, w: 400, h: 128, type: 'wall' },
+            { x: 720, y: 720, w: 96, h: 96, type: 'small' },
+            { x: 2480, y: 720, w: 96, h: 96, type: 'small' },
+            { x: 720, y: 2480, w: 96, h: 96, type: 'small' },
+            { x: 2480, y: 2480, w: 96, h: 96, type: 'small' },
 
             // Extra cover to make movement lanes more interesting
-            { x: 760, y: 420, w: 80, h: 140, type: 'cover' },
-            { x: 1160, y: 420, w: 80, h: 140, type: 'cover' },
-            { x: 760, y: 1440, w: 80, h: 140, type: 'cover' },
-            { x: 1160, y: 1440, w: 80, h: 140, type: 'cover' },
+            { x: 1216, y: 672, w: 128, h: 224, type: 'cover' },
+            { x: 1856, y: 672, w: 128, h: 224, type: 'cover' },
+            { x: 1216, y: 2304, w: 128, h: 224, type: 'cover' },
+            { x: 1856, y: 2304, w: 128, h: 224, type: 'cover' },
 
             // Moving obstructions (dynamic cover)
-            { x: 760, y: 900, w: 180, h: 40, type: 'moving',
-              baseX: 760, baseY: 900, motion: { axis: 'x', amp: 260, period: 2400, phase: 0 } },
-            { x: 1120, y: 680, w: 40, h: 220, type: 'moving',
-              baseX: 1120, baseY: 680, motion: { axis: 'y', amp: 320, period: 3000, phase: 1.4 } }
+            { x: 1216, y: 1440, w: 288, h: 64, type: 'moving',
+              baseX: 1216, baseY: 1440, motion: { axis: 'x', amp: 416, period: 2400, phase: 0 } },
+            { x: 1792, y: 1088, w: 64, h: 352, type: 'moving',
+              baseX: 1792, baseY: 1088, motion: { axis: 'y', amp: 512, period: 3000, phase: 1.4 } }
         ];
 
         // Hazards (damage zones that are NOT solid for bullets)
         const HAZARDS = [
-            { x: 820, y: 310, w: 220, h: 90, kind: 'fire', dps: 28 },
-            { x: 280, y: 880, w: 160, h: 160, kind: 'toxic', dps: 16 },
-            { x: 1560, y: 880, w: 160, h: 160, kind: 'toxic', dps: 16 },
-            { x: 880, y: 1620, w: 240, h: 90, kind: 'electric', dps: 22 },
-            { x: 860, y: 980, w: 120, h: 120, kind: 'fire', dps: 34 }
+            { x: 1312, y: 496, w: 352, h: 144, kind: 'fire', dps: 28 },
+            { x: 448, y: 1408, w: 256, h: 256, kind: 'toxic', dps: 16 },
+            { x: 2496, y: 1408, w: 256, h: 256, kind: 'toxic', dps: 16 },
+            { x: 1408, y: 2592, w: 384, h: 144, kind: 'electric', dps: 22 },
+            { x: 1376, y: 1568, w: 192, h: 192, kind: 'fire', dps: 34 }
         ];
 
         // Game State
@@ -485,6 +497,7 @@
             x: 0, y: 0,
             vx: 0, vy: 0,
             angle: 0,
+            aimAngle: 0,
             hp: 100,
             maxHp: 100,
             ammo: MAX_AMMO,
@@ -942,6 +955,8 @@
             myPlayer.ammo = MAX_AMMO;
             myPlayer.kills = 0;
             myPlayer.deaths = 0;
+            myPlayer.angle = 0;
+            myPlayer.aimAngle = 0;
 
             enemyPlayer = {
                 x: SPAWN_POINTS[spawnIdx ^ 1].x,
@@ -1050,32 +1065,12 @@
             }
         }
 
-        // Fire button
+        // Fire button removed (auto-fire handles it when enemy is close)
         const fireBtn = document.getElementById('fireBtn');
-        fireBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            fireButtonFiring = true;
-            syncFirePressed();
-        }, { passive: false });
-
-        fireBtn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            fireButtonFiring = false;
-            syncFirePressed();
-        }, { passive: false });
-
-        fireBtn.addEventListener('mousedown', () => {
-            fireButtonFiring = true;
-            syncFirePressed();
-        });
-        fireBtn.addEventListener('mouseup', () => {
-            fireButtonFiring = false;
-            syncFirePressed();
-        });
-        fireBtn.addEventListener('mouseleave', () => {
-            fireButtonFiring = false;
-            syncFirePressed();
-        });
+        if (fireBtn) {
+            fireBtn.style.display = 'none';
+            fireBtn.style.pointerEvents = 'none';
+        }
 
         // Game logic
         function update(dt) {
@@ -1085,53 +1080,73 @@
             gameState.time += dt;
             updateDynamicObstacles();
 
-            // Movement with obstacle collision
-            const nextX = myPlayer.x + joystickVector.x * PLAYER_SPEED;
-            const nextY = myPlayer.y + joystickVector.y * PLAYER_SPEED;
-
-            // Check X collision
-            let collisionX = checkObstacleCollision(nextX, myPlayer.y, PLAYER_SIZE);
-            if (!collisionX.hit) {
-                myPlayer.x = nextX;
-            } else {
-                // Slide along obstacle
-                myPlayer.x += joystickVector.x * PLAYER_SPEED * 0.3;
+            // If moving cover moved into us, gently resolve overlap.
+            for (let iter = 0; iter < 2; iter++) {
+                const curCol = checkObstacleCollision(myPlayer.x, myPlayer.y, PLAYER_COLLISION_RADIUS);
+                if (!curCol.hit) break;
+                myPlayer.x += curCol.pushX;
+                myPlayer.y += curCol.pushY;
             }
 
-            // Check Y collision
-            let collisionY = checkObstacleCollision(myPlayer.x, nextY, PLAYER_SIZE);
-            if (!collisionY.hit) {
-                myPlayer.y = nextY;
-            } else {
-                myPlayer.y += joystickVector.y * PLAYER_SPEED * 0.3;
+            // Movement with obstacle collision (sub-stepped to prevent clipping through blocks)
+            const moveXTotal = joystickVector.x * PLAYER_SPEED;
+            const moveYTotal = joystickVector.y * PLAYER_SPEED;
+            const maxMove = Math.max(Math.abs(moveXTotal), Math.abs(moveYTotal));
+            const subStepsMove = Math.max(1, Math.ceil(maxMove / 2));
+            const stepX = moveXTotal / subStepsMove;
+            const stepY = moveYTotal / subStepsMove;
+
+            for (let s = 0; s < subStepsMove; s++) {
+                const attemptX = myPlayer.x + stepX;
+                if (!checkObstacleCollision(attemptX, myPlayer.y, PLAYER_COLLISION_RADIUS).hit) {
+                    myPlayer.x = attemptX;
+                }
+
+                const attemptY = myPlayer.y + stepY;
+                if (!checkObstacleCollision(myPlayer.x, attemptY, PLAYER_COLLISION_RADIUS).hit) {
+                    myPlayer.y = attemptY;
+                }
             }
 
             // World bounds
             myPlayer.x = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, myPlayer.x));
             myPlayer.y = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, myPlayer.y));
 
+            // Turn in direction of motion (joystick)
+            const moveMag = Math.sqrt(joystickVector.x * joystickVector.x + joystickVector.y * joystickVector.y);
+            if (moveMag > 0.05) {
+                const targetMoveAngle = Math.atan2(joystickVector.y, joystickVector.x);
+                let diff = targetMoveAngle - myPlayer.angle;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                myPlayer.angle += diff * 0.25;
+            }
+
             // Hazards & pulses (damage zones)
             if (applyHazardDamage(dtSec)) return;
             maybeSpawnPulse();
             if (updatePulses(dtSec)) return;
 
-            // Auto-aim at enemy
+            // Auto-aim at enemy (weapon aim) + auto-fire ONLY when enemy is close
+            let enemyDist = Infinity;
+            let enemyClose = false;
             if (enemyPlayer && enemyPlayer.hp > 0) {
                 const dx = enemyPlayer.x - myPlayer.x;
                 const dy = enemyPlayer.y - myPlayer.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                enemyDist = Math.sqrt(dx * dx + dy * dy);
+                enemyClose = enemyDist < AUTO_FIRE_RANGE;
 
-                if (dist < 500) {
-                    const targetAngle = Math.atan2(dy, dx);
-                    let diff = targetAngle - myPlayer.angle;
+                if (enemyDist < AIM_RANGE) {
+                    const targetAimAngle = Math.atan2(dy, dx);
+                    let diff = targetAimAngle - myPlayer.aimAngle;
                     while (diff > Math.PI) diff -= Math.PI * 2;
                     while (diff < -Math.PI) diff += Math.PI * 2;
-                    myPlayer.angle += diff * 0.12;
+                    myPlayer.aimAngle += diff * 0.12;
                 }
             }
 
-            // Shooting
-            if (firePressed && Date.now() - myPlayer.lastFire > FIRE_RATE && !myPlayer.reloading && myPlayer.hp > 0) {
+            // Shooting (proximity-based)
+            if (enemyClose && Date.now() - myPlayer.lastFire > FIRE_RATE && !myPlayer.reloading && myPlayer.hp > 0) {
                 if (myPlayer.ammo > 0) {
                     shoot();
                 } else {
@@ -1234,21 +1249,32 @@
             myPlayer.lastFire = Date.now();
 
             const spawnDist = 40;
-            const bx = myPlayer.x + Math.cos(myPlayer.angle) * spawnDist;
-            const by = myPlayer.y + Math.sin(myPlayer.angle) * spawnDist;
+            const shootAngle = myPlayer.aimAngle;
+            const bx = myPlayer.x + Math.cos(shootAngle) * spawnDist;
+            const by = myPlayer.y + Math.sin(shootAngle) * spawnDist;
 
-            createBullet(bx, by, myPlayer.angle, true);
+            createBullet(bx, by, shootAngle, true);
 
             send({
                 type: 'bullet',
                 x: bx,
                 y: by,
-                angle: myPlayer.angle
+                angle: shootAngle
             });
 
             // Recoil
-            myPlayer.x -= Math.cos(myPlayer.angle) * 3;
-            myPlayer.y -= Math.sin(myPlayer.angle) * 3;
+            myPlayer.x -= Math.cos(shootAngle) * 3;
+            myPlayer.y -= Math.sin(shootAngle) * 3;
+
+            // Resolve any recoil clipping
+            const recoilCol = checkObstacleCollision(myPlayer.x, myPlayer.y, PLAYER_COLLISION_RADIUS);
+            if (recoilCol.hit) {
+                myPlayer.x += recoilCol.pushX;
+                myPlayer.y += recoilCol.pushY;
+            }
+
+            myPlayer.x = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, myPlayer.x));
+            myPlayer.y = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, myPlayer.y));
 
             updateHUD();
         }
@@ -1351,6 +1377,8 @@
             myPlayer.hp = 100;
             myPlayer.ammo = MAX_AMMO;
             myPlayer.reloading = false;
+            myPlayer.angle = 0;
+            myPlayer.aimAngle = 0;
             myPlayer.deathPending = false;
             send({ type: 'respawn', x: myPlayer.x, y: myPlayer.y });
             updateHUD();
@@ -1375,22 +1403,50 @@
 
         // FIXED: Better rendering with proper player drawing and obstacles
         function draw() {
-            CTX.fillStyle = '#0a0a0a';
+            // Background (radial + subtle glow)
+            const bg = CTX.createRadialGradient(
+                CANVAS.width / 2,
+                CANVAS.height / 2,
+                0,
+                CANVAS.width / 2,
+                CANVAS.height / 2,
+                Math.max(CANVAS.width, CANVAS.height)
+            );
+            bg.addColorStop(0, 'rgba(0, 80, 0, 0.18)');
+            bg.addColorStop(0.35, 'rgba(10, 10, 18, 0.35)');
+            bg.addColorStop(1, 'rgba(0, 0, 0, 0.95)');
+            CTX.fillStyle = bg;
             CTX.fillRect(0, 0, CANVAS.width, CANVAS.height);
 
             CTX.save();
             CTX.translate(-gameState.camera.x, -gameState.camera.y);
 
+            // Stars (world-space)
+            const viewL = gameState.camera.x;
+            const viewT = gameState.camera.y;
+            const viewR = gameState.camera.x + CANVAS.width;
+            const viewB = gameState.camera.y + CANVAS.height;
+            for (let i = 0; i < STARS.length; i++) {
+                const s = STARS[i];
+                if (s.x < viewL - 40 || s.x > viewR + 40 || s.y < viewT - 40 || s.y > viewB + 40) continue;
+                CTX.globalAlpha = s.a * (0.7 + 0.3 * Math.sin(gameState.time / 800 + s.x * 0.01));
+                CTX.fillStyle = 'rgba(0, 255, 110, 0.9)';
+                CTX.beginPath();
+                CTX.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                CTX.fill();
+            }
+            CTX.globalAlpha = 1;
+
             // Grid
             CTX.strokeStyle = 'rgba(0,255,0,0.08)';
             CTX.lineWidth = 1;
-            for (let x = 0; x <= WORLD_SIZE; x += 100) {
+            for (let x = 0; x <= WORLD_SIZE; x += 160) {
                 CTX.beginPath();
                 CTX.moveTo(x, 0);
                 CTX.lineTo(x, WORLD_SIZE);
                 CTX.stroke();
             }
-            for (let y = 0; y <= WORLD_SIZE; y += 100) {
+            for (let y = 0; y <= WORLD_SIZE; y += 160) {
                 CTX.beginPath();
                 CTX.moveTo(0, y);
                 CTX.lineTo(WORLD_SIZE, y);
@@ -1456,6 +1512,33 @@
             }
 
             CTX.restore();
+
+            // Screen-space vignette + scanlines
+            CTX.save();
+            CTX.globalAlpha = 1;
+            const vign = CTX.createRadialGradient(
+                CANVAS.width / 2,
+                CANVAS.height / 2,
+                Math.min(CANVAS.width, CANVAS.height) * 0.2,
+                CANVAS.width / 2,
+                CANVAS.height / 2,
+                Math.max(CANVAS.width, CANVAS.height)
+            );
+            vign.addColorStop(0, 'rgba(0,0,0,0)');
+            vign.addColorStop(1, 'rgba(0,0,0,0.85)');
+            CTX.fillStyle = vign;
+            CTX.fillRect(0, 0, CANVAS.width, CANVAS.height);
+
+            CTX.globalAlpha = 0.05;
+            CTX.strokeStyle = '#00ff66';
+            CTX.lineWidth = 1;
+            for (let y = 0; y < CANVAS.height; y += 4) {
+                CTX.beginPath();
+                CTX.moveTo(0, y);
+                CTX.lineTo(CANVAS.width, y);
+                CTX.stroke();
+            }
+            CTX.restore();
             drawMinimap();
         }
 
@@ -1464,52 +1547,151 @@
             const t = gameState.time / 1000;
 
             HAZARDS.forEach(hz => {
-                let fill, glow, border;
+                const cx = hz.x + hz.w / 2;
+                const cy = hz.y + hz.h / 2;
+                const size = Math.max(hz.w, hz.h);
+                const flicker = 0.6 + 0.4 * Math.sin(t * 10 + hz.x * 0.003 + hz.y * 0.002);
+
+                // Per-type colors
+                let fillMain, fillDark, glow, border, warn;
                 if (hz.kind === 'fire') {
-                    fill = 'rgba(255, 80, 0, 0.25)';
-                    glow = '#ff8800';
-                    border = '#ff3b00';
+                    fillMain = 'rgba(255, 70, 0, 0.30)';
+                    fillDark = 'rgba(60, 0, 0, 0.35)';
+                    glow = '#ff7a00';
+                    border = '#ff2a00';
+                    warn = 'rgba(255, 0, 0, 0.20)';
                 } else if (hz.kind === 'electric') {
-                    fill = 'rgba(0, 220, 255, 0.18)';
+                    fillMain = 'rgba(0, 210, 255, 0.18)';
+                    fillDark = 'rgba(0, 20, 40, 0.45)';
                     glow = '#00f0ff';
                     border = '#00c8ff';
+                    warn = 'rgba(0, 240, 255, 0.16)';
                 } else {
-                    fill = 'rgba(0, 255, 100, 0.14)';
+                    fillMain = 'rgba(30, 255, 130, 0.12)';
+                    fillDark = 'rgba(0, 40, 10, 0.55)';
                     glow = '#35ff7a';
-                    border = '#14cc4b';
+                    border = '#19cc55';
+                    warn = 'rgba(40, 255, 120, 0.14)';
                 }
 
-                const flicker = 0.65 + 0.35 * Math.sin(t * 8 + hz.x * 0.01 + hz.y * 0.005);
-
-                CTX.fillStyle = fill;
-                CTX.globalAlpha = 0.85 * flicker;
-                CTX.fillRect(hz.x, hz.y, hz.w, hz.h);
-
-                // Border + glow
+                // Warning ring pulses
+                const ringR = size * 0.55 + (Math.sin(t * 6 + hz.x * 0.01) * 6);
+                for (let k = 0; k < 3; k++) {
+                    const a = 0.22 * (1 - k / 3) * (0.6 + 0.4 * Math.sin(t * 9 + k + hz.y * 0.002));
+                    CTX.globalAlpha = a;
+                    CTX.strokeStyle = border;
+                    CTX.lineWidth = 2;
+                    CTX.shadowBlur = 28;
+                    CTX.shadowColor = glow;
+                    CTX.beginPath();
+                    CTX.arc(cx, cy, ringR + k * 12, 0, Math.PI * 2);
+                    CTX.stroke();
+                    CTX.shadowBlur = 0;
+                }
                 CTX.globalAlpha = 1;
+
+                // Hazard base (dark core + bright overlay)
+                CTX.fillStyle = fillDark;
+                CTX.fillRect(hz.x, hz.y, hz.w, hz.h);
+                CTX.fillStyle = fillMain;
+                CTX.globalAlpha = 0.95 * flicker;
+                CTX.fillRect(hz.x, hz.y, hz.w, hz.h);
+                CTX.globalAlpha = 1;
+
+                // Thick border with glow
                 CTX.strokeStyle = border;
-                CTX.lineWidth = 2;
-                CTX.shadowBlur = 22;
+                CTX.lineWidth = 3;
+                CTX.shadowBlur = 24;
                 CTX.shadowColor = glow;
                 CTX.strokeRect(hz.x, hz.y, hz.w, hz.h);
                 CTX.shadowBlur = 0;
 
-                // Animated diagonal stripes inside hazard
+                // Clip inside hazard for animated texture
                 CTX.save();
                 CTX.beginPath();
                 CTX.rect(hz.x, hz.y, hz.w, hz.h);
                 CTX.clip();
-                CTX.globalAlpha = 0.35 * flicker;
+
+                // Scanning lines
+                CTX.globalAlpha = 0.25 * flicker;
                 CTX.strokeStyle = glow;
                 CTX.lineWidth = 1;
-                const offset = (t * 60) % 20;
-                for (let i = -hz.h; i < hz.w + hz.h; i += 24) {
+                const scanOff = (t * 80) % 18;
+                for (let y = hz.y - 18; y <= hz.y + hz.h + 18; y += 10) {
+                    const alpha = 0.08 + 0.14 * Math.sin(t * 6 + y * 0.02 + hz.x * 0.002);
+                    CTX.globalAlpha = alpha * flicker;
+                    CTX.beginPath();
+                    CTX.moveTo(hz.x + ((y + scanOff) % 6), y);
+                    CTX.lineTo(hz.x + hz.w, y);
+                    CTX.stroke();
+                }
+
+                // Diagonal streaks / stripes
+                CTX.globalAlpha = 0.35 * flicker;
+                CTX.lineWidth = 2;
+                const offset = (t * 120) % 30;
+                for (let i = -hz.h; i < hz.w + hz.h; i += 26) {
                     CTX.beginPath();
                     CTX.moveTo(hz.x + i + offset, hz.y);
                     CTX.lineTo(hz.x + i + offset - hz.h, hz.y + hz.h);
                     CTX.stroke();
                 }
+
+                // Extra per-type effects
+                if (hz.kind === 'fire') {
+                    // Embers
+                    CTX.globalAlpha = 0.55 * flicker;
+                    CTX.fillStyle = '#ffcc66';
+                    for (let e = 0; e < 10; e++) {
+                        const ex = hz.x + (e / 10) * hz.w + Math.sin(t * 4 + e + hz.x * 0.01) * 6;
+                        const ey = hz.y + hz.h * (0.2 + 0.6 * Math.abs(Math.sin(t * 2 + e * 1.7)));
+                        CTX.beginPath();
+                        CTX.arc(ex, ey, 1.2 + Math.abs(Math.sin(t * 9 + e)) * 1.2, 0, Math.PI * 2);
+                        CTX.fill();
+                    }
+                } else if (hz.kind === 'electric') {
+                    // Lightning forks (lightweight procedural)
+                    CTX.globalAlpha = 0.5 * flicker;
+                    CTX.strokeStyle = glow;
+                    CTX.lineWidth = 2;
+                    const bolts = 4;
+                    for (let b = 0; b < bolts; b++) {
+                        const sx = hz.x + hz.w * (0.1 + 0.8 * Math.abs(Math.sin(t * 2 + b * 3.1)));
+                        const sy = hz.y + hz.h * 0.05;
+                        CTX.beginPath();
+                        CTX.moveTo(sx, sy);
+                        let px = sx;
+                        let py = sy;
+                        for (let s = 0; s < 7; s++) {
+                            const nx = px + (Math.sin(t * 6 + b * 10 + s) * 18);
+                            const ny = py + hz.h * 0.13;
+                            CTX.lineTo(nx, ny);
+                            px = nx;
+                            py = ny;
+                        }
+                        CTX.stroke();
+                    }
+                } else if (hz.kind === 'toxic') {
+                    // Toxic fog (opaque cloud edges)
+                    CTX.globalAlpha = 0.18 + 0.12 * flicker;
+                    CTX.fillStyle = 'rgba(60,255,140,0.35)';
+                    for (let c = 0; c < 5; c++) {
+                        const ox = cx + Math.sin(t * 1.2 + c * 2.1) * (size * 0.18);
+                        const oy = cy + Math.cos(t * 1.1 + c * 1.7) * (size * 0.18);
+                        CTX.beginPath();
+                        CTX.arc(ox, oy, size * (0.16 + c * 0.02), 0, Math.PI * 2);
+                        CTX.fill();
+                    }
+                }
+
                 CTX.restore();
+
+                // Label (subtle)
+                CTX.globalAlpha = 0.38;
+                CTX.fillStyle = warn;
+                CTX.font = '700 12px Courier New';
+                CTX.fillText(hz.kind.toUpperCase(), hz.x + 8, hz.y + 18);
+                CTX.globalAlpha = 1;
             });
 
             CTX.restore();
