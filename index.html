@@ -422,6 +422,11 @@
         const FIRE_RATE = 130; // tuned for balance
         const RELOAD_TIME = 2000;
         const MAX_AMMO = 30;
+        const PICKUP_RESPAWN_MS = 6500;
+        const SPEED_BOOST_MULTIPLIER = 1.7;
+        const SPEED_BOOST_DURATION = 3500;
+        const SHIELD_DURATION = 4200;
+        const SHIELD_DAMAGE_MULT = 0.55;
 
         // Background stars (world-space)
         const STAR_COUNT = 240;
@@ -457,6 +462,7 @@
             players: {},
             bullets: [],
             particles: [],
+            pickups: [],
             camera: { x: 0, y: 0 },
             isHost: false,
             gameStarted: false,
@@ -481,7 +487,9 @@
             deaths: 0,
             lastFire: 0,
             color: '#0f0',
-            deathPending: false
+            deathPending: false,
+            speedBoostUntil: 0,
+            shieldUntil: 0
         };
 
         let enemyPlayer = null;
@@ -664,7 +672,11 @@
                     createBullet(data.x, data.y, data.angle, false);
                     break;
                 case 'hit':
-                    myPlayer.hp -= data.damage;
+                    {
+                        const now = Date.now();
+                        const dmgMult = now < myPlayer.shieldUntil ? SHIELD_DAMAGE_MULT : 1;
+                        myPlayer.hp -= data.damage * dmgMult;
+                    }
                     createBloodSplatter(myPlayer.x, myPlayer.y);
                     updateHUD();
                     if (myPlayer.hp <= 0) {
@@ -856,6 +868,43 @@
             return SPAWN_POINTS[preferredIdx] || SPAWN_POINTS[0];
         }
 
+        function pointBlockedByObstacle(x, y, radius = 26) {
+            return checkObstacleCollision(x, y, radius).hit;
+        }
+
+        function randomOpenWorldPoint(pad = 180) {
+            let x = WORLD_SIZE / 2;
+            let y = WORLD_SIZE / 2;
+            for (let i = 0; i < 30; i++) {
+                x = pad + Math.random() * (WORLD_SIZE - pad * 2);
+                y = pad + Math.random() * (WORLD_SIZE - pad * 2);
+                const dMy = Math.hypot(x - myPlayer.x, y - myPlayer.y);
+                const dEn = enemyPlayer ? Math.hypot(x - enemyPlayer.x, y - enemyPlayer.y) : Infinity;
+                if (dMy < 180 || dEn < 180) continue;
+                if (pointBlockedByObstacle(x, y, 28)) continue;
+                return { x, y };
+            }
+            return { x, y };
+        }
+
+        function spawnPickup(type) {
+            const p = randomOpenWorldPoint(180);
+            gameState.pickups.push({
+                id: `pk-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+                type,
+                x: p.x,
+                y: p.y,
+                size: 18,
+                life: 1
+            });
+        }
+
+        function setupPickups() {
+            gameState.pickups = [];
+            spawnPickup('speed');
+            spawnPickup('shield');
+        }
+
         function applyHazardDamage(dtSec) {
             if (!HAZARDS.length) return false;
             let damageTaken = 0;
@@ -948,7 +997,9 @@
                 moveSpeed: moveSpeed,
                 targetKind: targetIsEnemy ? 'enemy' : 'my',
                 dirX: dirX0 / len0,
-                dirY: dirY0 / len0
+                dirY: dirY0 / len0,
+                homingTurnRate: 2.4, // rad/s, limited steering makes bombs dodgeable
+                maxSeekMs: 900 // after this, bomb continues with current momentum
             });
         }
 
@@ -964,17 +1015,31 @@
                 const armed = pulse.age >= pulse.fuse;
                 if (!armed) {
                     // Move bomb toward its current target before it detonates.
-                    const tx = (pulse.targetKind === 'enemy' && enemyPlayer && enemyPlayer.hp > 0) ? enemyPlayer.x : myPlayer.x;
-                    const ty = (pulse.targetKind === 'enemy' && enemyPlayer && enemyPlayer.hp > 0) ? enemyPlayer.y : myPlayer.y;
-                    const dxT = tx - pulse.x;
-                    const dyT = ty - pulse.y;
-                    const lenT = Math.sqrt(dxT * dxT + dyT * dyT) || 1;
-                    const nx = dxT / lenT;
-                    const ny = dyT / lenT;
+                    if (pulse.age * 1000 <= (pulse.maxSeekMs || 0)) {
+                        const tx = (pulse.targetKind === 'enemy' && enemyPlayer && enemyPlayer.hp > 0) ? enemyPlayer.x : myPlayer.x;
+                        const ty = (pulse.targetKind === 'enemy' && enemyPlayer && enemyPlayer.hp > 0) ? enemyPlayer.y : myPlayer.y;
+                        const dxT = tx - pulse.x;
+                        const dyT = ty - pulse.y;
+                        const lenT = Math.sqrt(dxT * dxT + dyT * dyT) || 1;
+                        const desiredX = dxT / lenT;
+                        const desiredY = dyT / lenT;
+
+                        // Smoothly rotate velocity vector toward target (prevents impossible tracking).
+                        const curA = Math.atan2(pulse.dirY, pulse.dirX);
+                        const desiredA = Math.atan2(desiredY, desiredX);
+                        let diff = desiredA - curA;
+                        while (diff > Math.PI) diff -= Math.PI * 2;
+                        while (diff < -Math.PI) diff += Math.PI * 2;
+                        const maxTurn = (pulse.homingTurnRate || 2.2) * dtSec;
+                        const turn = Math.max(-maxTurn, Math.min(maxTurn, diff));
+                        const newA = curA + turn;
+                        pulse.dirX = Math.cos(newA);
+                        pulse.dirY = Math.sin(newA);
+                    }
 
                     const ms = pulse.moveSpeed || 500;
-                    pulse.x = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, pulse.x + nx * ms * dtSec));
-                    pulse.y = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, pulse.y + ny * ms * dtSec));
+                    pulse.x = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, pulse.x + pulse.dirX * ms * dtSec));
+                    pulse.y = Math.max(PLAYER_SIZE, Math.min(WORLD_SIZE - PLAYER_SIZE, pulse.y + pulse.dirY * ms * dtSec));
                 } else {
                     pulse.r += pulse.speed * dtSec;
                 }
@@ -985,7 +1050,8 @@
 
                 if (armed && !pulse.hit && dist < pulse.r + PLAYER_COLLISION_RADIUS * 0.2) {
                     pulse.hit = true;
-                    myPlayer.hp -= PULSE_DAMAGE;
+                    const dmgMult = Date.now() < myPlayer.shieldUntil ? SHIELD_DAMAGE_MULT : 1;
+                    myPlayer.hp -= PULSE_DAMAGE * dmgMult;
                     createExplosion(pulse.x, pulse.y);
                     updateHUD();
                 }
@@ -1038,6 +1104,9 @@
             gameState.time = 0;
             gameState.pulses = [];
             gameState.nextPulseAt = 1000;
+            myPlayer.speedBoostUntil = 0;
+            myPlayer.shieldUntil = 0;
+            setupPickups();
 
             updateHUD();
             lastTime = performance.now();
@@ -1153,9 +1222,12 @@
                 myPlayer.y += curCol.pushY;
             }
 
+            const nowMs = Date.now();
+            const speedMult = nowMs < myPlayer.speedBoostUntil ? SPEED_BOOST_MULTIPLIER : 1;
+
             // Movement with obstacle collision (sub-stepped to prevent clipping through blocks)
-            const moveXTotal = joystickVector.x * PLAYER_SPEED;
-            const moveYTotal = joystickVector.y * PLAYER_SPEED;
+            const moveXTotal = joystickVector.x * PLAYER_SPEED * speedMult;
+            const moveYTotal = joystickVector.y * PLAYER_SPEED * speedMult;
             const maxMove = Math.max(Math.abs(moveXTotal), Math.abs(moveYTotal));
             const subStepsMove = Math.max(1, Math.ceil(maxMove / 2));
             const stepX = moveXTotal / subStepsMove;
@@ -1187,10 +1259,27 @@
                 myPlayer.angle += diff * 0.25;
             }
 
-            // Hazards & pulses (damage zones)
-            // hazards disabled
+            // Bomb pulses
             maybeSpawnPulse();
             if (updatePulses(dtSec)) return;
+
+            // Pickups
+            for (let i = gameState.pickups.length - 1; i >= 0; i--) {
+                const pk = gameState.pickups[i];
+                const dxp = pk.x - myPlayer.x;
+                const dyp = pk.y - myPlayer.y;
+                if ((dxp * dxp + dyp * dyp) <= (pk.size + PLAYER_COLLISION_RADIUS) * (pk.size + PLAYER_COLLISION_RADIUS)) {
+                    if (pk.type === 'speed') {
+                        myPlayer.speedBoostUntil = nowMs + SPEED_BOOST_DURATION;
+                        addKillFeed('Speed boost acquired');
+                    } else if (pk.type === 'shield') {
+                        myPlayer.shieldUntil = nowMs + SHIELD_DURATION;
+                        addKillFeed('Shield acquired');
+                    }
+                    gameState.pickups.splice(i, 1);
+                    setTimeout(() => spawnPickup(pk.type), PICKUP_RESPAWN_MS);
+                }
+            }
 
             // Auto-aim at enemy (weapon aim) + auto-fire ONLY when enemy is close
             let enemyDist = Infinity;
@@ -1449,6 +1538,8 @@
             myPlayer.reloading = false;
             myPlayer.angle = 0;
             myPlayer.aimAngle = 0;
+            myPlayer.speedBoostUntil = 0;
+            myPlayer.shieldUntil = 0;
             myPlayer.deathPending = false;
             send({ type: 'respawn', x: myPlayer.x, y: myPlayer.y });
             updateHUD();
@@ -1536,6 +1627,7 @@
 
             // Hazards & pulses (keep the map active)
             drawPulses();
+            drawPickups();
 
             // Bullets
             gameState.bullets.forEach(b => {
@@ -1857,6 +1949,55 @@
             CTX.restore();
         }
 
+        function drawPickups() {
+            if (!gameState.pickups || !gameState.pickups.length) return;
+
+            const now = Date.now();
+            CTX.save();
+            for (const pk of gameState.pickups) {
+                const pulse = 0.75 + 0.25 * Math.sin(gameState.time / 200 + pk.x * 0.01);
+                const r = pk.size * (0.9 + 0.1 * pulse);
+
+                if (pk.type === 'speed') {
+                    CTX.shadowColor = '#ffd400';
+                    CTX.fillStyle = '#ffd400';
+                } else {
+                    CTX.shadowColor = '#00d7ff';
+                    CTX.fillStyle = '#00d7ff';
+                }
+
+                CTX.shadowBlur = 18;
+                CTX.globalAlpha = 0.9;
+                CTX.beginPath();
+                CTX.arc(pk.x, pk.y, r, 0, Math.PI * 2);
+                CTX.fill();
+
+                CTX.shadowBlur = 0;
+                CTX.globalAlpha = 1;
+                CTX.fillStyle = '#001';
+                CTX.font = '700 13px Courier New';
+                CTX.textAlign = 'center';
+                CTX.textBaseline = 'middle';
+                CTX.fillText(pk.type === 'speed' ? '>>' : 'S', pk.x, pk.y);
+            }
+
+            // Active shield ring around player
+            if (now < myPlayer.shieldUntil && myPlayer.hp > 0) {
+                CTX.globalAlpha = 0.45;
+                CTX.strokeStyle = '#00d7ff';
+                CTX.lineWidth = 3;
+                CTX.shadowBlur = 22;
+                CTX.shadowColor = '#00d7ff';
+                CTX.beginPath();
+                CTX.arc(myPlayer.x, myPlayer.y, PLAYER_SIZE + 8, 0, Math.PI * 2);
+                CTX.stroke();
+                CTX.shadowBlur = 0;
+                CTX.globalAlpha = 1;
+            }
+
+            CTX.restore();
+        }
+
         // FIXED: Better obstacle drawing with 3D effect
         function drawObstacles() {
             OBSTACLES.forEach(obs => {
@@ -1969,6 +2110,14 @@
                     obs.w * scale,
                     obs.h * scale
                 );
+            });
+
+            // Pickups
+            gameState.pickups.forEach(pk => {
+                MINI_CTX.fillStyle = pk.type === 'speed' ? '#ffd400' : '#00d7ff';
+                MINI_CTX.beginPath();
+                MINI_CTX.arc(pk.x * scale, pk.y * scale, 2.5, 0, Math.PI * 2);
+                MINI_CTX.fill();
             });
 
             // Players
