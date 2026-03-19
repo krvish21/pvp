@@ -4,7 +4,7 @@ window.GAME_CONFIG = {
   worldSize: 3200,
   playerSize: 30,
   playerCollisionRadius: 20,
-  playerSpeed: 5,
+  playerSpeed: 10,
 
   autoFireRange: 380,
   aimRange: 800,
@@ -20,7 +20,7 @@ window.GAME_CONFIG = {
   pickupRespawnMs: 6500,
   speedBoostMultiplier: 1.7,
   speedBoostDuration: 3500,
-  shieldDuration: 4200,
+  shieldDuration: 8400,
   shieldDamageMultiplier: 0.55,
   healthPickupAmount: 28,
 
