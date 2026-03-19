@@ -332,10 +332,17 @@
         #chatPanel {
             position: absolute;
             left: 12px;
-            bottom: 12px;
+            top: 56px;
             width: min(360px, 86vw);
             z-index: 120;
             pointer-events: auto;
+        }
+
+        @media (max-width: 900px) {
+            #chatPanel {
+                top: 52px;
+                width: min(320px, 70vw);
+            }
         }
 
         #chatLog {
@@ -659,6 +666,15 @@
             if (broadcast) {
                 send({ type: 'pauseToggle', paused: gameState.paused });
             }
+        }
+
+        function togglePauseByMe() {
+            if (!gameState.gameStarted) return;
+            const willPause = !gameState.paused;
+            setPauseState(willPause, 'me', true);
+            // Repeat once for robustness on flaky links.
+            setTimeout(() => send({ type: 'pauseToggle', paused: willPause }), 120);
+            addChatMessage(willPause ? 'You paused the game.' : 'You resumed the game.', 'system');
         }
 
         // Resize canvas
@@ -1352,10 +1368,7 @@
         }
         if (pauseBtn) {
             pauseBtn.addEventListener('click', () => {
-                if (!gameState.gameStarted) return;
-                const willPause = !gameState.paused;
-                setPauseState(willPause, 'me', true);
-                addChatMessage(willPause ? 'You paused the game.' : 'You resumed the game.', 'system');
+                togglePauseByMe();
             });
         }
         if (chatInput) {
@@ -1371,9 +1384,7 @@
         document.addEventListener('keydown', (e) => {
             if ((e.key === 'p' || e.key === 'P') && gameState.gameStarted) {
                 if (document.activeElement === chatInput) return;
-                const willPause = !gameState.paused;
-                setPauseState(willPause, 'me', true);
-                addChatMessage(willPause ? 'You paused the game.' : 'You resumed the game.', 'system');
+                togglePauseByMe();
             }
         });
 
