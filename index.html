@@ -187,105 +187,89 @@
         }
 
         .hud-panel {
-            background: var(--bg-panel);
-            border: 1px solid var(--panel-border);
-            border-radius: 4px;
-            padding: 10px 14px;
-            min-width: 200px;
+            background: rgba(4,12,8,0.82);
+            border: 1px solid rgba(0,255,136,0.18);
+            border-radius: 3px;
+            padding: 8px 10px;
+            width: 160px;
             position: relative;
-            backdrop-filter: blur(4px);
         }
 
+        /* Top accent line */
         .hud-panel::before {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0;
+            top: 0; left: 12px; right: 12px;
             height: 1px;
             background: linear-gradient(90deg, transparent, var(--neon-green), transparent);
-            opacity: 0.6;
+            opacity: 0.5;
         }
 
-        /* Segmented health bar */
-        .hud-label {
-            font-size: 0.6em;
-            letter-spacing: 0.2em;
-            color: rgba(0,255,136,0.45);
-            margin-bottom: 5px;
+        /* Each bar row: icon + bar side by side */
+        .hud-row {
             display: flex;
-            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+        .hud-row:last-child { margin-bottom: 0; }
+
+        .hud-icon {
+            font-size: 0.6em;
+            letter-spacing: 0.1em;
+            color: rgba(0,255,136,0.4);
+            width: 24px;
+            flex-shrink: 0;
+            text-align: right;
         }
 
+        /* Segmented bars */
         .seg-bar {
             display: flex;
-            gap: 2px;
-            margin-bottom: 10px;
+            gap: 1.5px;
+            flex: 1;
         }
-
         .seg-bar .seg {
             flex: 1;
-            height: 12px;
+            height: 7px;
             border-radius: 1px;
-            transition: background 0.15s, box-shadow 0.15s;
+            transition: background 0.12s, box-shadow 0.12s;
         }
 
-        .seg-bar.health .seg.active {
-            background: var(--neon-green);
-            box-shadow: 0 0 6px var(--neon-green), 0 0 12px rgba(0,255,136,0.4);
-        }
-        .seg-bar.health .seg.inactive { background: rgba(0,255,136,0.1); }
-        .seg-bar.health .seg.low.active {
-            background: var(--neon-red);
-            box-shadow: 0 0 6px var(--neon-red), 0 0 12px rgba(255,34,68,0.4);
-        }
-        .seg-bar.health .seg.mid.active {
-            background: var(--neon-yellow);
-            box-shadow: 0 0 6px var(--neon-yellow);
-        }
+        /* Health */
+        .seg-bar.health .seg.active     { background: var(--neon-green); box-shadow: 0 0 4px rgba(0,255,136,0.5); }
+        .seg-bar.health .seg.mid.active { background: var(--neon-yellow); box-shadow: 0 0 4px rgba(255,221,0,0.5); }
+        .seg-bar.health .seg.low.active { background: var(--neon-red);    box-shadow: 0 0 4px rgba(255,34,68,0.6); animation: reloadPulse 0.6s infinite alternate; }
+        .seg-bar.health .seg.inactive   { background: rgba(0,255,136,0.08); }
 
-        .seg-bar.ammo .seg.active {
-            background: var(--neon-blue);
-            box-shadow: 0 0 4px var(--neon-blue);
-        }
-        .seg-bar.ammo .seg.inactive { background: rgba(0,212,255,0.1); }
-        .seg-bar.ammo .seg.reloading { background: var(--neon-orange); box-shadow: 0 0 4px var(--neon-orange); animation: reloadPulse 0.4s infinite alternate; }
+        /* Ammo */
+        .seg-bar.ammo .seg.active    { background: var(--neon-blue); box-shadow: 0 0 3px rgba(0,212,255,0.4); }
+        .seg-bar.ammo .seg.inactive  { background: rgba(0,212,255,0.07); }
+        .seg-bar.ammo .seg.reloading { background: var(--neon-orange); animation: reloadPulse 0.35s infinite alternate; }
 
-        @keyframes reloadPulse { from { opacity: 0.4; } to { opacity: 1; } }
+        @keyframes reloadPulse { from { opacity: 0.35; } to { opacity: 1; } }
 
-        .hud-stat-row {
+        /* Inline stat chips: kills · deaths · ping */
+        .hud-chips {
             display: flex;
-            gap: 16px;
-            margin-top: 8px;
+            gap: 6px;
+            margin-top: 6px;
+            padding-top: 5px;
+            border-top: 1px solid rgba(0,255,136,0.1);
         }
-
-        .hud-stat {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .hud-chip {
+            font-size: 0.6em;
+            letter-spacing: 0.08em;
+            color: rgba(0,255,136,0.45);
         }
-
-        .hud-stat-label {
-            font-size: 0.55em;
-            letter-spacing: 0.18em;
-            color: rgba(0,255,136,0.4);
-        }
-
-        .hud-stat-value {
+        .hud-chip span {
             font-family: var(--font-title);
-            font-size: 1.1em;
+            font-size: 1.2em;
             font-weight: 700;
             color: var(--neon-green);
-            text-shadow: 0 0 10px rgba(0,255,136,0.7);
+            text-shadow: 0 0 8px rgba(0,255,136,0.6);
+            margin-left: 2px;
         }
-
-        /* Corner bracket decoration */
-        .bracket-corner {
-            position: absolute;
-            width: 10px; height: 10px;
-        }
-        .bracket-corner.tl { top: -1px; left: -1px; border-top: 2px solid var(--neon-green); border-left: 2px solid var(--neon-green); }
-        .bracket-corner.tr { top: -1px; right: -1px; border-top: 2px solid var(--neon-green); border-right: 2px solid var(--neon-green); }
-        .bracket-corner.bl { bottom: -1px; left: -1px; border-bottom: 2px solid var(--neon-green); border-left: 2px solid var(--neon-green); }
-        .bracket-corner.br { bottom: -1px; right: -1px; border-bottom: 2px solid var(--neon-green); border-right: 2px solid var(--neon-green); }
 
         /* ═══════════════════════ RADAR MINIMAP ═══════════════════════ */
         #radarContainer {
@@ -770,38 +754,18 @@
         <!-- HUD Panel -->
         <div id="hud">
             <div class="hud-panel">
-                <div class="bracket-corner tl"></div>
-                <div class="bracket-corner tr"></div>
-                <div class="bracket-corner bl"></div>
-                <div class="bracket-corner br"></div>
-
-                <!-- Health -->
-                <div class="hud-label">
-                    <span>INTEGRITY</span>
-                    <span id="hpText">100</span>
+                <div class="hud-row">
+                    <span class="hud-icon" id="hpText">100</span>
+                    <div class="seg-bar health" id="healthSegs"></div>
                 </div>
-                <div class="seg-bar health" id="healthSegs"></div>
-
-                <!-- Ammo -->
-                <div class="hud-label">
-                    <span>AMMO</span>
-                    <span id="ammoText">30</span>
+                <div class="hud-row">
+                    <span class="hud-icon" id="ammoText">30</span>
+                    <div class="seg-bar ammo" id="ammoSegs"></div>
                 </div>
-                <div class="seg-bar ammo" id="ammoSegs"></div>
-
-                <div class="hud-stat-row">
-                    <div class="hud-stat">
-                        <span class="hud-stat-value" id="killsText">0</span>
-                        <span class="hud-stat-label">KILLS</span>
-                    </div>
-                    <div class="hud-stat">
-                        <span class="hud-stat-value" id="deathsText">0</span>
-                        <span class="hud-stat-label">DEATHS</span>
-                    </div>
-                    <div class="hud-stat">
-                        <span class="hud-stat-value" id="pingText">--</span>
-                        <span class="hud-stat-label">PING</span>
-                    </div>
+                <div class="hud-chips">
+                    <span class="hud-chip">K<span id="killsText">0</span></span>
+                    <span class="hud-chip">D<span id="deathsText">0</span></span>
+                    <span class="hud-chip">~<span id="pingText">--</span></span>
                 </div>
             </div>
         </div>
@@ -1271,6 +1235,10 @@
             updateConnectionStatus('connected');
             document.getElementById('hostStatus').textContent = 'Connected! Starting game...';
             startPing();
+            // Host broadcasts kill target so both players are in sync
+            if (gameState.isHost) {
+                setTimeout(() => send({ type: 'syncConfig', killTarget }), 100);
+            }
             setTimeout(() => { if (!gameState.gameStarted) startGame(); }, 500);
         });
         conn.on('data', handleNetworkData);
@@ -1334,6 +1302,13 @@
             case 'enemyScore':
                 enemyKills = data.kills || 0;
                 updateScoreDisplay();
+                break;
+            case 'syncConfig':
+                // Guest receives host's chosen kill target
+                if (typeof data.killTarget === 'number') {
+                    setKillTarget(data.killTarget);
+                    buildScorePips();
+                }
                 break;
         }
     }
@@ -1594,6 +1569,8 @@
         radarAngle = 0;
         radarEnemyBlip = { visible: false, x: 0, y: 0, alpha: 0, lastSeenAt: -999 };
         setPauseState(false, 'system', false);
+        // Re-sync kill target every round (host may have changed it)
+        if (gameState.isHost) send({ type: 'syncConfig', killTarget });
         setupPickups();
         obstacleChatStamps = [];
         updateHUD();
