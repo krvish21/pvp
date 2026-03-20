@@ -349,6 +349,26 @@
         .tally-pip.win  { background:var(--neon-green); box-shadow:0 0 8px var(--neon-green); }
         .tally-pip.loss { background:var(--neon-red);   box-shadow:0 0 8px var(--neon-red); }
 
+        /* ═══════════════════════ RESPAWN COUNTDOWN ═══════════════════════ */
+        #respawnCountdown {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-title);
+            font-size: 5em;
+            font-weight: 900;
+            color: var(--neon-red);
+            text-shadow: 0 0 40px rgba(255,45,120,0.9), 0 0 80px rgba(255,45,120,0.4);
+            pointer-events: none;
+            z-index: 170;
+            display: none;
+            animation: countPulse 1s ease-out forwards;
+        }
+        @keyframes countPulse {
+            0%   { transform: translate(-50%,-50%) scale(1.4); opacity: 1; }
+            100% { transform: translate(-50%,-50%) scale(0.9); opacity: 0.7; }
+        }
+
         /* ═══════════════════════ SOUND TOGGLE ═══════════════════════ */
         #soundBtn {
             position:absolute; bottom:58px; left:12px;
@@ -424,6 +444,7 @@
         <div id="damageFlash"></div>
         <div id="enemyAlert">◈ HOSTILE DETECTED</div>
         <div id="connectionStatus" class="disconnected">OFFLINE</div>
+        <div id="respawnCountdown"></div>
 
         <!-- Radar: top-right -->
         <div id="radarContainer">
@@ -1191,13 +1212,38 @@
         }
     }
 
-    // ─── Damage Flash ─────────────────────────────────────────────────────────
-    function triggerDamageFlash() {
+    // ─── Damage Flash + Hit Direction Indicator ───────────────────────────────
+    let hitIndicator = { active: false, angle: 0, alpha: 0 };
+
+    function triggerDamageFlash(sourceX, sourceY) {
         const el = document.getElementById('damageFlash');
         if (!el) return;
         el.style.background = 'rgba(255,45,120,0.22)';
         setTimeout(() => { el.style.background = 'rgba(255,45,120,0)'; }, 180);
+
+        // Record direction of hit for the screen-edge arc indicator
+        if (sourceX !== undefined && sourceY !== undefined) {
+            const angle = Math.atan2(sourceY - myPlayer.y, sourceX - myPlayer.x);
+            hitIndicator = { active: true, angle, alpha: 1.0 };
+        }
     }
+
+    // ─── Kill Freeze-frame ────────────────────────────────────────────────────
+    let killFreezeUntil = 0;
+    const KILL_FREEZE_MS = 80;
+
+    function triggerKillFreeze() {
+        killFreezeUntil = Date.now() + KILL_FREEZE_MS;
+        // Violet flash overlay
+        const el = document.getElementById('damageFlash');
+        if (el) {
+            el.style.background = 'rgba(191,95,255,0.35)';
+            setTimeout(() => { el.style.background = 'rgba(191,95,255,0)'; }, KILL_FREEZE_MS + 60);
+        }
+    }
+
+    // ─── Muzzle Flash ─────────────────────────────────────────────────────────
+    let muzzleFlash = { active: false, x: 0, y: 0, angle: 0, life: 0 };
 
     // ─── Enemy Alert ──────────────────────────────────────────────────────────
     let enemyAlertTimeout = null;
@@ -1387,7 +1433,8 @@
                 const dmgMult = now < myPlayer.shieldUntil ? SHIELD_DAMAGE_MULT : 1;
                 myPlayer.hp -= data.damage * dmgMult;
                 playSound('hit');
-                triggerDamageFlash();
+                // Pass enemy position as damage source so hit indicator knows direction
+                triggerDamageFlash(enemyPlayer ? enemyPlayer.x : undefined, enemyPlayer ? enemyPlayer.y : undefined);
                 createBloodSplatter(myPlayer.x, myPlayer.y);
                 updateHUD();
                 if (myPlayer.hp <= 0) handleDeath(data.killer);
@@ -1638,7 +1685,7 @@
                 pulse.hit = true;
                 const dmgMult = Date.now() < myPlayer.shieldUntil ? SHIELD_DAMAGE_MULT : 1;
                 myPlayer.hp -= BOMB_DAMAGE * dmgMult;
-                triggerDamageFlash();
+                triggerDamageFlash(pulse.x, pulse.y);
                 createExplosion(pulse.x, pulse.y);
                 updateHUD();
             }
@@ -1807,6 +1854,8 @@
     // ─── Update ───────────────────────────────────────────────────────────────
     function update(dt) {
         if (!gameState.gameStarted || gameState.paused) return;
+        // Kill freeze-frame: skip physics during freeze window
+        if (Date.now() < killFreezeUntil) return;
 
         const dtSec = dt / 1000;
         gameState.time += dt;
@@ -1972,6 +2021,18 @@
             send({ type: 'playerUpdate', x: myPlayer.x, y: myPlayer.y, angle: myPlayer.angle, hp: myPlayer.hp,
                 speedBoostUntil: myPlayer.speedBoostUntil||0, shieldUntil: myPlayer.shieldUntil||0 });
         }
+
+        // Fade hit direction indicator
+        if (hitIndicator.active) {
+            hitIndicator.alpha -= dtSec / 0.6; // fade over 600ms
+            if (hitIndicator.alpha <= 0) { hitIndicator.active = false; hitIndicator.alpha = 0; }
+        }
+
+        // Decay muzzle flash life
+        if (muzzleFlash.active) {
+            muzzleFlash.life--;
+            if (muzzleFlash.life <= 0) muzzleFlash.active = false;
+        }
     }
 
     function shoot() {
@@ -1979,6 +2040,8 @@
         playSound('shoot');
         const bx = myPlayer.x + Math.cos(myPlayer.aimAngle)*40;
         const by = myPlayer.y + Math.sin(myPlayer.aimAngle)*40;
+        // Muzzle flash at barrel tip
+        muzzleFlash = { active: true, x: bx, y: by, angle: myPlayer.aimAngle, life: 3 };
         createBullet(bx, by, myPlayer.aimAngle, true);
         send({ type: 'bullet', x: bx, y: by, angle: myPlayer.aimAngle });
         myPlayer.x -= Math.cos(myPlayer.aimAngle)*3;
@@ -2036,13 +2099,33 @@
         playSound('death');
         addKillFeed(killer === 'hazard' ? 'LOST TO THE GRID' : 'YOU WERE SIGNAL LOST');
         createExplosion(myPlayer.x, myPlayer.y);
-        setTimeout(() => respawn(), 2000);
+        startRespawnCountdown(3);
+    }
+
+    function startRespawnCountdown(n) {
+        const el = document.getElementById('respawnCountdown');
+        if (!el) { setTimeout(() => respawn(), 2000); return; }
+        el.textContent = n;
+        el.style.display = 'block';
+        // Re-trigger animation each tick
+        el.style.animation = 'none';
+        el.offsetHeight; // reflow
+        el.style.animation = 'countPulse 1s ease-out forwards';
+        if (n > 1) {
+            setTimeout(() => startRespawnCountdown(n - 1), 700);
+        } else {
+            setTimeout(() => {
+                el.style.display = 'none';
+                respawn();
+            }, 700);
+        }
     }
 
     function handleKill() {
         myPlayer.kills++;
         registerKillStreak();
         playSound('kill');
+        triggerKillFreeze();
         addKillFeed('ENEMY SIGNAL LOST');
         updateHUD();
         updateScoreDisplay();
@@ -2250,6 +2333,35 @@
             CTX.restore();
         }
 
+        // Muzzle flash
+        if (muzzleFlash.active) {
+            const mf = muzzleFlash;
+            const mfAlpha = mf.life / 3;
+            CTX.save();
+            CTX.translate(mf.x, mf.y);
+            CTX.rotate(mf.angle);
+            CTX.globalCompositeOperation = 'lighter';
+            // Bright core circle
+            CTX.globalAlpha = mfAlpha * 0.9;
+            CTX.fillStyle = '#ffffff';
+            CTX.shadowBlur = 22; CTX.shadowColor = '#bf5fff';
+            CTX.beginPath(); CTX.arc(0, 0, 7, 0, Math.PI*2); CTX.fill();
+            // Radial spikes — 4 short lines in a cross
+            CTX.strokeStyle = '#e0aaff';
+            CTX.lineWidth = 2;
+            CTX.globalAlpha = mfAlpha * 0.7;
+            for (let s = 0; s < 4; s++) {
+                const sa = (s / 4) * Math.PI * 2;
+                const len = s === 0 ? 18 : 10; // longer spike in firing direction
+                CTX.beginPath();
+                CTX.moveTo(Math.cos(sa) * 5, Math.sin(sa) * 5);
+                CTX.lineTo(Math.cos(sa) * len, Math.sin(sa) * len);
+                CTX.stroke();
+            }
+            CTX.shadowBlur = 0; CTX.globalAlpha = 1;
+            CTX.restore();
+        }
+
         // Particles
         for (const p of gameState.particles) {
             CTX.fillStyle = p.color;
@@ -2272,6 +2384,42 @@
         vign.addColorStop(1, 'rgba(0,0,0,0.82)');
         CTX.fillStyle = vign; CTX.fillRect(0, 0, CANVAS.width, CANVAS.height);
         CTX.restore();
+
+        // Hit direction indicator — screen-edge arc pointing toward damage source
+        if (hitIndicator.active && hitIndicator.alpha > 0) {
+            const cx = CANVAS.width / 2;
+            const cy = CANVAS.height / 2;
+            // Arc sits just inside the screen edge
+            const edgeR = Math.min(CANVAS.width, CANVAS.height) * 0.46;
+            const arcSpan = Math.PI * 0.28; // how wide the arc is (radians)
+            const a = hitIndicator.angle;
+
+            CTX.save();
+            CTX.translate(cx, cy);
+            CTX.rotate(a); // rotate so arc faces damage source
+
+            // Outer glow
+            CTX.globalAlpha = hitIndicator.alpha * 0.5;
+            CTX.strokeStyle = '#ff2d78';
+            CTX.lineWidth = 14;
+            CTX.shadowBlur = 24; CTX.shadowColor = '#ff2d78';
+            CTX.lineCap = 'round';
+            CTX.beginPath();
+            CTX.arc(0, 0, edgeR, -arcSpan / 2, arcSpan / 2);
+            CTX.stroke();
+
+            // Bright inner core
+            CTX.globalAlpha = hitIndicator.alpha * 0.85;
+            CTX.strokeStyle = '#ffaacc';
+            CTX.lineWidth = 4;
+            CTX.shadowBlur = 10;
+            CTX.beginPath();
+            CTX.arc(0, 0, edgeR, -arcSpan / 2, arcSpan / 2);
+            CTX.stroke();
+
+            CTX.shadowBlur = 0; CTX.globalAlpha = 1;
+            CTX.restore();
+        }
 
         drawRadar();
     }

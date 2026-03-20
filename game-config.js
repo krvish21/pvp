@@ -39,7 +39,7 @@ window.GAME_CONFIG = {
   // Bombs
   bombSpawnIntervalMs: 5600,
   bombDamage: 8,
-  bombMinRadius: 280,
+  bombMinRadius: 200,
   bombRadiusVariance: 100,
   bombMinExplosionSpeed: 300,
   bombExplosionSpeedVariance: 160,
