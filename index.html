@@ -1744,6 +1744,8 @@
         if (enemyPlayer && enemyPlayer.hp > 0) drawPlayer(enemyPlayer, '#ff2244', true);
         if (myPlayer.hp > 0) drawPlayer(myPlayer, '#00ff88', false);
 
+        drawEnemyArrow();
+
         CTX.restore();
 
         // Vignette
@@ -1755,6 +1757,102 @@
         CTX.restore();
 
         drawRadar();
+    }
+
+    // Arrow orbit radius (world-space pixels, just outside the player body)
+    const ARROW_ORBIT = 52;
+
+    function drawEnemyArrow() {
+        if (!enemyPlayer || enemyPlayer.hp <= 0 || myPlayer.hp <= 0) return;
+
+        // Convert enemy world position to screen position
+        const screenX = enemyPlayer.x - gameState.camera.x;
+        const screenY = enemyPlayer.y - gameState.camera.y;
+
+        // Only show when enemy is off-screen (with a small margin so it doesn't flicker at the edge)
+        const margin = 20;
+        const onScreen = screenX > -margin && screenX < CANVAS.width + margin &&
+                         screenY > -margin && screenY < CANVAS.height + margin;
+        if (onScreen) return;
+
+        // Angle from my player toward the enemy (world-space)
+        const dx = enemyPlayer.x - myPlayer.x;
+        const dy = enemyPlayer.y - myPlayer.y;
+        const angle = Math.atan2(dy, dx);
+
+        // Distance — used to pulse opacity when far, brighten when close
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const maxDist = Math.sqrt(WORLD_SIZE*WORLD_SIZE * 2);
+        const proximity = 1 - Math.min(dist / maxDist, 1); // 0 = far, 1 = close
+
+        // Subtle float bob on the orbit radius
+        const bob = Math.sin(gameState.time / 300) * 4;
+        const orbitR = ARROW_ORBIT + bob;
+
+        // Arrow tip position in world-space, orbiting the player
+        const tipX = myPlayer.x + Math.cos(angle) * orbitR;
+        const tipY = myPlayer.y + Math.sin(angle) * orbitR;
+
+        // Pulse alpha: slow breathe + proximity boost
+        const breathe = 0.55 + 0.45 * Math.abs(Math.sin(gameState.time / 500));
+        const alpha = Math.min(1, breathe + proximity * 0.3);
+
+        // Color shifts red as enemy gets closer
+        const r = Math.round(255);
+        const g = Math.round(34 + proximity * 0 );
+        const b = Math.round(68 - proximity * 40);
+        const color = `rgba(${r},${g},${b},${alpha})`;
+        const glowColor = `rgba(${r},${g},${b},0.35)`;
+
+        CTX.save();
+        CTX.translate(tipX, tipY);
+        CTX.rotate(angle);
+
+        // Glow shadow
+        CTX.shadowBlur = 18;
+        CTX.shadowColor = glowColor;
+
+        // Arrow shape: chevron pointing right (+x = forward in rotated space)
+        const aw = 18;  // half-length of arrow body
+        const ah = 9;   // half-width of arrowhead base
+        const as = 5;   // stem half-width
+
+        CTX.fillStyle = color;
+        CTX.beginPath();
+        // Arrowhead (triangle)
+        CTX.moveTo(aw, 0);          // tip
+        CTX.lineTo(aw - 12, -ah);   // back-left
+        CTX.lineTo(aw - 12, -as);   // step into stem
+        CTX.lineTo(-aw, -as);       // stem back-left
+        CTX.lineTo(-aw, as);        // stem back-right
+        CTX.lineTo(aw - 12, as);    // step out of stem
+        CTX.lineTo(aw - 12, ah);    // back-right
+        CTX.closePath();
+        CTX.fill();
+
+        // Bright outline
+        CTX.strokeStyle = `rgba(255,100,120,${alpha * 0.7})`;
+        CTX.lineWidth = 1;
+        CTX.stroke();
+
+        CTX.shadowBlur = 0;
+        CTX.restore();
+
+        // Second, fainter trailing arrow slightly further back for depth
+        CTX.save();
+        const trailR = orbitR - 16;
+        CTX.translate(myPlayer.x + Math.cos(angle)*trailR, myPlayer.y + Math.sin(angle)*trailR);
+        CTX.rotate(angle);
+        CTX.globalAlpha = alpha * 0.28;
+        CTX.fillStyle = `rgb(${r},${g},${b})`;
+        CTX.beginPath();
+        CTX.moveTo(12, 0);
+        CTX.lineTo(0, -6);
+        CTX.lineTo(0, 6);
+        CTX.closePath();
+        CTX.fill();
+        CTX.globalAlpha = 1;
+        CTX.restore();
     }
 
     function drawObstacles() {
