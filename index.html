@@ -365,11 +365,13 @@
             font-weight: bold;
             z-index: 100;
             border: 1px solid;
+            pointer-events: none;
         }
 
-        .connected { background: rgba(0,255,136,0.1); border-color: rgba(0,255,136,0.4); color: var(--neon-green); }
-        .connecting { background: rgba(255,221,0,0.1); border-color: rgba(255,221,0,0.4); color: var(--neon-yellow); animation: pulse 1s infinite; }
-        .disconnected { background: rgba(255,34,68,0.1); border-color: rgba(255,34,68,0.4); color: var(--neon-red); }
+        /* Connected = invisible; only show on problem states */
+        .connected { display: none; }
+        .connecting { background: rgba(255,221,0,0.12); border-color: rgba(255,221,0,0.5); color: var(--neon-yellow); animation: pulse 1s infinite; }
+        .disconnected { background: rgba(255,34,68,0.12); border-color: rgba(255,34,68,0.5); color: var(--neon-red); }
 
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
@@ -617,17 +619,18 @@
         /* ═══════════════════════ SCORE BAR ═══════════════════════ */
         #scoreBar {
             position: absolute;
-            top: 44px;
+            top: 14px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             align-items: center;
-            gap: 18px;
-            background: rgba(6,16,10,0.88);
-            border: 1px solid rgba(0,255,136,0.22);
-            padding: 6px 20px;
+            gap: 14px;
+            background: rgba(4,12,8,0.85);
+            border: 1px solid rgba(0,255,136,0.2);
+            padding: 5px 16px;
             z-index: 100;
             pointer-events: none;
+            white-space: nowrap;
         }
         .score-side { display: flex; flex-direction: column; align-items: center; min-width: 52px; }
         .score-num { font-family: var(--font-title); font-size: 1.6em; font-weight: 900; line-height: 1; }
@@ -1188,6 +1191,10 @@
         setTimeout(() => send({ type: 'pauseToggle', paused: willPause }), 120);
     }
 
+    // ─── Zoom / viewport scale ────────────────────────────────────────────────
+    // Values < 1 zoom out (show more world). 0.72 gives ~28% more view.
+    const ZOOM = CFG.zoom ?? 0.72;
+
     function resize() {
         CANVAS.width = window.innerWidth;
         CANVAS.height = window.innerHeight;
@@ -1459,8 +1466,10 @@
         if (gameState.time < gameState.nextPulseAt) return;
         gameState.nextPulseAt = gameState.time + BOMB_SPAWN_INTERVAL;
 
+        const camVisW = CANVAS.width / ZOOM;
+        const camVisH = CANVAS.height / ZOOM;
         const camL = gameState.camera.x, camT = gameState.camera.y;
-        const camR = camL + CANVAS.width, camB = camT + CANVAS.height;
+        const camR = camL + camVisW, camB = camT + camVisH;
         const edge = Math.floor(Math.random() * 4);
         let px = 0, py = 0, tries = 0;
         do {
@@ -1759,9 +1768,11 @@
             if (p.life <= 0) gameState.particles.splice(i, 1);
         }
 
-        // Camera
-        gameState.camera.x = Math.max(0, Math.min(WORLD_SIZE-CANVAS.width, myPlayer.x - CANVAS.width/2));
-        gameState.camera.y = Math.max(0, Math.min(WORLD_SIZE-CANVAS.height, myPlayer.y - CANVAS.height/2));
+        // Camera — account for zoom: visible world region = canvas / ZOOM
+        const visW = CANVAS.width / ZOOM;
+        const visH = CANVAS.height / ZOOM;
+        gameState.camera.x = Math.max(0, Math.min(WORLD_SIZE - visW, myPlayer.x - visW / 2));
+        gameState.camera.y = Math.max(0, Math.min(WORLD_SIZE - visH, myPlayer.y - visH / 2));
 
         // Radar sweep update
         radarAngle = (radarAngle + RADAR_SWEEP_SPEED * dtSec) % (Math.PI * 2);
@@ -1944,10 +1955,13 @@
         CTX.restore();
 
         CTX.save();
+        CTX.scale(ZOOM, ZOOM);
         CTX.translate(-gameState.camera.x, -gameState.camera.y);
 
+        const visW = CANVAS.width / ZOOM;
+        const visH = CANVAS.height / ZOOM;
         const vL = gameState.camera.x, vT = gameState.camera.y;
-        const vR = vL + CANVAS.width, vB = vT + CANVAS.height;
+        const vR = vL + visW, vB = vT + visH;
 
         // ── World-space circuit debris (scrolls with camera, feels like floor) ──
         CTX.save();
@@ -2050,8 +2064,9 @@
     function drawEnemyArrow() {
         if (!enemyPlayer || enemyPlayer.hp <= 0 || myPlayer.hp <= 0) return;
 
-        const screenX = enemyPlayer.x - gameState.camera.x;
-        const screenY = enemyPlayer.y - gameState.camera.y;
+        // Convert enemy world position to zoomed screen position
+        const screenX = (enemyPlayer.x - gameState.camera.x) * ZOOM;
+        const screenY = (enemyPlayer.y - gameState.camera.y) * ZOOM;
         const margin = 20;
         const onScreen = screenX > -margin && screenX < CANVAS.width + margin &&
                          screenY > -margin && screenY < CANVAS.height + margin;
