@@ -26,6 +26,12 @@ window.GAME_CONFIG = {
   shieldDamageMultiplier: 0.55,
   healthPickupAmount: 28,
 
+  // Procedural map
+  mapSeed: null,         // null = new random seed every round; set a number to replay a specific map
+  obstacleCount: 14,     // how many obstacle pieces to generate (more = busier map)
+  obstacleMinSize: 70,   // smallest obstacle side in world-px
+  obstacleMaxSize: 300,  // largest obstacle side in world-px
+
   // Bombs
   bombSpawnIntervalMs: 5600,
   bombDamage: 8,

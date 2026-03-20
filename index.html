@@ -647,17 +647,164 @@
         { x: 1600, y: 480 }, { x: 1600, y: 2720 }
     ];
 
-    let OBSTACLES = [
-        { x: 1180, y: 1180, w: 240, h: 160, type: 'box' },
-        { x: 1780, y: 1180, w: 240, h: 160, type: 'box' },
-        { x: 1400, y: 1400, w: 160, h: 160, type: 'center' },
-        { x: 600, y: 1500, w: 120, h: 520, type: 'wall' },
-        { x: 2480, y: 1500, w: 120, h: 520, type: 'wall' }
-    ];
-
     const HAZARDS = [];
 
-    // ─── Radar State ─────────────────────────────────────────────────────────────
+    // ─── Map config from game-config ─────────────────────────────────────────
+    const MAP_OBSTACLE_COUNT = CFG.obstacleCount    ?? 14;
+    const MAP_OBS_MIN        = CFG.obstacleMinSize  ?? 70;
+    const MAP_OBS_MAX        = CFG.obstacleMaxSize  ?? 300;
+    const MAP_FIXED_SEED     = CFG.mapSeed          ?? null; // null = new seed each round
+
+    // ─── Seeded PRNG (mulberry32) ─────────────────────────────────────────────
+    function makePRNG(seed) {
+        let s = seed >>> 0;
+        return function() {
+            s += 0x6d2b79f5;
+            let t = s;
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    // ─── Procedural map generator ─────────────────────────────────────────────
+    // Generates OBSTACLES deterministically from a seed.
+    // Both host and guest call this with the same seed → identical maps.
+    function generateMap(seed) {
+        const rng   = makePRNG(seed);
+        const pad   = 300;                  // clearance from world edge
+        const inner = WORLD_SIZE - pad * 2; // usable area
+        const cx    = WORLD_SIZE / 2;
+        const cy    = WORLD_SIZE / 2;
+        const obs   = [];
+
+        // Helper: does rectangle [x,y,w,h] overlap any existing obstacle or a spawn zone?
+        const SPAWN_CLEAR = 320; // radius around each spawn kept clear
+        function overlaps(x, y, w, h) {
+            // check existing obstacles (with a gap margin)
+            const gap = 80;
+            for (const o of obs) {
+                if (x < o.x + o.w + gap && x + w > o.x - gap &&
+                    y < o.y + o.h + gap && y + h > o.y - gap) return true;
+            }
+            // check spawn zones
+            const spawns = [
+                { x: 480, y: 480 }, { x: 2720, y: 2720 },
+                { x: 480, y: 2720 }, { x: 2720, y: 480 },
+                { x: 1600, y: 480 }, { x: 1600, y: 2720 }
+            ];
+            const cx2 = x + w / 2, cy2 = y + h / 2;
+            const halfDiag = Math.sqrt(w * w + h * h) / 2;
+            for (const sp of spawns) {
+                if (Math.hypot(cx2 - sp.x, cy2 - sp.y) < SPAWN_CLEAR + halfDiag) return true;
+            }
+            return false;
+        }
+
+        // Pick map style for this seed: 0=arena, 1=corridor, 2=mixed
+        const style = Math.floor(rng() * 3);
+
+        // ── Centre anchor (always present, gives map a focal point) ──────────
+        const centreW = MAP_OBS_MIN + Math.floor(rng() * (MAP_OBS_MAX * 0.4 - MAP_OBS_MIN));
+        const centreH = MAP_OBS_MIN + Math.floor(rng() * (MAP_OBS_MAX * 0.4 - MAP_OBS_MIN));
+        obs.push({ x: cx - centreW/2, y: cy - centreH/2, w: centreW, h: centreH, type: 'center' });
+
+        // ── Symmetric pair generator (places mirrored pieces) ───────────────
+        function addSymPair(ax, ay, w, h, type) {
+            // Mirror across world centre
+            const bx = WORLD_SIZE - ax - w;
+            const by = WORLD_SIZE - ay - h;
+            if (!overlaps(ax, ay, w, h)) obs.push({ x: ax, y: ay, w, h, type });
+            if (!overlaps(bx, by, w, h)) obs.push({ x: bx, y: by, w, h, type });
+        }
+
+        // ── Corridor mode: long walls creating lanes ──────────────────────
+        function addCorridorWalls(count) {
+            for (let i = 0; i < count; i++) {
+                // Vertical or horizontal wall
+                const horiz = rng() < 0.5;
+                const w = horiz
+                    ? MAP_OBS_MIN + Math.floor(rng() * (MAP_OBS_MAX * 1.5 - MAP_OBS_MIN))
+                    : MAP_OBS_MIN * 0.5 + Math.floor(rng() * MAP_OBS_MIN);
+                const h = horiz
+                    ? MAP_OBS_MIN * 0.5 + Math.floor(rng() * MAP_OBS_MIN)
+                    : MAP_OBS_MIN + Math.floor(rng() * (MAP_OBS_MAX * 1.5 - MAP_OBS_MIN));
+                // Place in a quadrant
+                const qx = pad + Math.floor(rng() * (inner / 2 - w));
+                const qy = pad + Math.floor(rng() * (inner - h));
+                addSymPair(qx, qy, w, h, 'wall');
+            }
+        }
+
+        // ── Arena mode: scattered cover boxes ────────────────────────────
+        function addArenaBoxes(count) {
+            for (let i = 0; i < count; i++) {
+                const w = MAP_OBS_MIN + Math.floor(rng() * (MAP_OBS_MAX - MAP_OBS_MIN));
+                const h = MAP_OBS_MIN + Math.floor(rng() * (MAP_OBS_MAX - MAP_OBS_MIN));
+                const x = pad + Math.floor(rng() * (inner - w));
+                const y = pad + Math.floor(rng() * (inner - h));
+                if (!overlaps(x, y, w, h)) obs.push({ x, y, w, h, type: 'box' });
+            }
+        }
+
+        // ── L-shapes (two joined rects) ───────────────────────────────────
+        function addLShape() {
+            const armLen = MAP_OBS_MIN + Math.floor(rng() * (MAP_OBS_MAX * 0.8));
+            const armW   = MAP_OBS_MIN * 0.4 + Math.floor(rng() * MAP_OBS_MIN * 0.4);
+            const px = pad + Math.floor(rng() * (inner / 2 - armLen));
+            const py = pad + Math.floor(rng() * (inner - armLen));
+            // Horizontal arm
+            if (!overlaps(px, py, armLen, armW)) {
+                obs.push({ x: px, y: py, w: armLen, h: armW, type: 'box' });
+                // Vertical stem
+                if (!overlaps(px, py, armW, armLen)) {
+                    obs.push({ x: px, y: py, w: armW, h: armLen, type: 'box' });
+                }
+            }
+            // Mirror
+            const mx = WORLD_SIZE - px - armLen;
+            const my = WORLD_SIZE - py - armLen;
+            if (!overlaps(mx, my, armLen, armW)) obs.push({ x: mx, y: my, w: armLen, h: armW, type: 'box' });
+            if (!overlaps(mx, my, armW, armLen)) obs.push({ x: mx, y: my, w: armW, h: armLen, type: 'box' });
+        }
+
+        // ── Build layout based on style ──────────────────────────────────
+        const half = Math.floor(MAP_OBSTACLE_COUNT / 2);
+        if (style === 0) {
+            // Pure arena
+            addArenaBoxes(MAP_OBSTACLE_COUNT);
+        } else if (style === 1) {
+            // Pure corridor
+            addCorridorWalls(MAP_OBSTACLE_COUNT);
+        } else {
+            // Mixed: corridors + boxes + L-shapes
+            addCorridorWalls(Math.floor(half * 0.6));
+            addArenaBoxes(Math.floor(half * 0.6));
+            addLShape();
+            addLShape();
+        }
+
+        // Clamp all obstacles to world bounds
+        for (const o of obs) {
+            o.x = Math.max(pad / 2, Math.min(WORLD_SIZE - o.w - pad / 2, o.x));
+            o.y = Math.max(pad / 2, Math.min(WORLD_SIZE - o.h - pad / 2, o.y));
+            o.x = Math.round(o.x);
+            o.y = Math.round(o.y);
+        }
+
+        return obs;
+    }
+
+    // Current map seed (host generates, guest receives via syncConfig)
+    let currentMapSeed = 0;
+
+    function applyMapSeed(seed) {
+        currentMapSeed = seed;
+        OBSTACLES = generateMap(seed);
+    }
+
+    // Static OBSTACLES array (overwritten each round by applyMapSeed)
+    let OBSTACLES = generateMap(MAP_FIXED_SEED ?? Math.random() * 0xffffffff | 0);
     const RADAR_SIZE = 150;
     const RADAR_SWEEP_SPEED = 1.2; // radians per second
     let radarAngle = 0;
@@ -872,9 +1019,11 @@
             updateConnectionStatus('connected');
             document.getElementById('hostStatus').textContent = 'Connected! Starting game...';
             startPing();
-            // Host broadcasts kill target so both players are in sync
+            // Host broadcasts kill target and map seed so both players are in sync
             if (gameState.isHost) {
-                setTimeout(() => send({ type: 'syncConfig', killTarget }), 100);
+                const seed = MAP_FIXED_SEED ?? (Math.random() * 0xffffffff | 0);
+                applyMapSeed(seed);
+                setTimeout(() => send({ type: 'syncConfig', killTarget, mapSeed: seed }), 100);
             }
             setTimeout(() => { if (!gameState.gameStarted) startGame(); }, 500);
         });
@@ -941,10 +1090,13 @@
                 updateScoreDisplay();
                 break;
             case 'syncConfig':
-                // Guest receives host's chosen kill target
+                // Guest receives host's chosen kill target and map seed
                 if (typeof data.killTarget === 'number') {
                     setKillTarget(data.killTarget);
                     buildScorePips();
+                }
+                if (typeof data.mapSeed === 'number') {
+                    applyMapSeed(data.mapSeed);
                 }
                 break;
         }
@@ -1208,8 +1360,13 @@
         radarAngle = 0;
         radarEnemyBlip = { visible: false, x: 0, y: 0, alpha: 0, lastSeenAt: -999 };
         setPauseState(false, 'system', false);
-        // Re-sync kill target every round (host may have changed it)
-        if (gameState.isHost) send({ type: 'syncConfig', killTarget });
+
+        // Host generates a new map seed every round; guest receives it via syncConfig
+        if (gameState.isHost) {
+            const seed = MAP_FIXED_SEED ?? (Math.random() * 0xffffffff | 0);
+            applyMapSeed(seed);
+            send({ type: 'syncConfig', killTarget, mapSeed: seed });
+        }
         setupPickups();
         obstacleChatStamps = [];
         updateHUD();
