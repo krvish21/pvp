@@ -2687,197 +2687,101 @@
 
     function drawPlayer(p, color, isEnemy) {
         const now = Date.now();
-        const pulse = 0.85 + 0.15 * Math.sin(gameState.time / 420 + (isEnemy ? 1.4 : 0));
-        const dim   = color + '99'; // semi-transparent version for recessed areas
-
         CTX.save();
         CTX.translate(p.x, p.y);
 
-        // ── Health bar ────────────────────────────────────────────────────────
+        // Health bar (float above)
         if (isEnemy || p.hp < 100) {
-            const barW = 48, barH = 5, bx = -barW/2, by = -52;
-            CTX.fillStyle = 'rgba(0,0,0,0.7)';
-            CTX.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
-            CTX.fillStyle = 'rgba(0,0,0,0.5)';
+            const barW = 52, barH = 7, bx = -barW/2, by = -48;
+            CTX.fillStyle = 'rgba(0,0,0,0.6)';
+            CTX.fillRect(bx-1, by-1, barW+2, barH+2);
+            CTX.fillStyle = 'rgba(255,45,120,0.25)';
             CTX.fillRect(bx, by, barW, barH);
-            const hpPct   = Math.max(0, p.hp / 100);
-            const hpColor = hpPct > 0.55 ? color : (hpPct > 0.25 ? '#e879f9' : '#ff2d78');
+            const hpPct = Math.max(0, p.hp/100);
+            const hpColor = hpPct > 0.55 ? color : (hpPct > 0.25 ? '#ffdd00' : '#ff2d78');
             CTX.fillStyle = hpColor;
-            CTX.shadowBlur = 5; CTX.shadowColor = hpColor;
+            CTX.shadowBlur = 6; CTX.shadowColor = hpColor;
             CTX.fillRect(bx, by, barW * hpPct, barH);
             CTX.shadowBlur = 0;
         }
 
-        // ── Ground shadow ─────────────────────────────────────────────────────
-        CTX.globalAlpha = 0.28;
+        // Shadow
+        CTX.globalAlpha = 0.3;
         CTX.fillStyle = '#000';
-        CTX.beginPath(); CTX.ellipse(3, 18, 18, 6, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.beginPath(); CTX.ellipse(0, 22, 14, 5, 0, 0, Math.PI*2); CTX.fill();
         CTX.globalAlpha = 1;
 
-        // All body drawing is in local rotated space
         CTX.rotate(p.angle);
+        CTX.shadowBlur = 20; CTX.shadowColor = color;
 
-        // ── Outer glow halo ───────────────────────────────────────────────────
-        CTX.shadowBlur = 22 * pulse; CTX.shadowColor = color;
-
-        // ── Hull — hexagonal-ish shape (clipped polygon) ──────────────────────
-        // Points: front-tip, upper-front, upper-rear, rear-notch, lower-rear, lower-front
-        const hullPath = () => {
-            CTX.beginPath();
-            CTX.moveTo( 22,   0);   // nose tip
-            CTX.lineTo( 14, -16);   // upper front shoulder
-            CTX.lineTo(-10, -18);   // upper rear shoulder
-            CTX.lineTo(-20,  -9);   // rear upper corner
-            CTX.lineTo(-20,   9);   // rear lower corner
-            CTX.lineTo(-10,  18);   // lower rear shoulder
-            CTX.lineTo( 14,  16);   // lower front shoulder
-            CTX.closePath();
-        };
-
-        // Dark filled interior base
-        CTX.shadowBlur = 0;
-        hullPath();
-        CTX.fillStyle = '#08031a';
-        CTX.fill();
-
-        // Hull fill — two-tone: front half brighter
-        const hullGrad = CTX.createLinearGradient(-20, 0, 22, 0);
-        hullGrad.addColorStop(0,   'rgba(0,0,0,0)');
-        hullGrad.addColorStop(0.5, color + '28');
-        hullGrad.addColorStop(1,   color + '50');
-        hullPath();
-        CTX.fillStyle = hullGrad;
-        CTX.fill();
-
-        // Hull border — glowing edge
-        CTX.shadowBlur = 18 * pulse; CTX.shadowColor = color;
-        hullPath();
-        CTX.strokeStyle = color;
-        CTX.lineWidth = 1.5;
-        CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // ── Internal panel lines — lateral tick marks ─────────────────────────
-        CTX.strokeStyle = color + '55';
-        CTX.lineWidth = 0.8;
-        // Upper tick
-        CTX.beginPath(); CTX.moveTo(-2, -18); CTX.lineTo(8, -14); CTX.stroke();
-        // Lower tick
-        CTX.beginPath(); CTX.moveTo(-2,  18); CTX.lineTo(8,  14); CTX.stroke();
-        // Forward centre spine — from core toward barrel root
-        CTX.strokeStyle = color + '40';
-        CTX.lineWidth = 0.7;
-        CTX.beginPath(); CTX.moveTo(0, 0); CTX.lineTo(20, 0); CTX.stroke();
-
-        // ── Corner accent dots ────────────────────────────────────────────────
+        // Body
         CTX.fillStyle = color;
-        CTX.shadowBlur = 6; CTX.shadowColor = color;
-        const dots = [[ 14, -16], [ 14, 16], [-10, -18], [-10, 18]];
-        for (const [dx, dy] of dots) {
-            CTX.beginPath(); CTX.arc(dx, dy, 2, 0, Math.PI * 2); CTX.fill();
-        }
-        CTX.shadowBlur = 0;
+        CTX.fillRect(-19, -19, 38, 38);
+        CTX.fillStyle = '#010808';
+        CTX.fillRect(-11, -11, 22, 22);
+        CTX.fillStyle = color;
+        CTX.fillRect(-7, -7, 14, 14);
 
-        // ── Central core — diamond or cross depending on player ───────────────
-        CTX.save();
-        CTX.shadowBlur = 10 * pulse; CTX.shadowColor = color;
-        CTX.strokeStyle = color;
-        CTX.lineWidth = 1.2;
-        if (!isEnemy) {
-            // Diamond (local player)
-            CTX.beginPath();
-            CTX.moveTo(-5,  0); CTX.lineTo( 0, -5);
-            CTX.lineTo( 5,  0); CTX.lineTo( 0,  5);
-            CTX.closePath(); CTX.stroke();
-            // Bright centre dot
-            CTX.fillStyle = color;
-            CTX.globalAlpha = pulse;
-            CTX.beginPath(); CTX.arc(0, 0, 2, 0, Math.PI * 2); CTX.fill();
-            CTX.globalAlpha = 1;
-        } else {
-            // Cross (enemy player)
-            CTX.beginPath();
-            CTX.moveTo(-5, 0); CTX.lineTo(5, 0);
-            CTX.moveTo(0, -5); CTX.lineTo(0, 5);
-            CTX.stroke();
-            CTX.fillStyle = color;
-            CTX.globalAlpha = 0.8;
-            CTX.beginPath(); CTX.arc(0, 0, 1.8, 0, Math.PI * 2); CTX.fill();
-            CTX.globalAlpha = 1;
-        }
+        // Barrel
+        CTX.fillStyle = 'rgba(255,255,255,0.9)';
+        CTX.fillRect(14, -3, 22, 6);
+        CTX.fillStyle = 'rgba(150,150,150,0.6)';
+        CTX.fillRect(18, -1.5, 14, 3);
+
         CTX.restore();
 
-        // ── Barrel — tapered double prong ─────────────────────────────────────
-        CTX.shadowBlur = 8; CTX.shadowColor = color;
-        // Upper prong
-        CTX.fillStyle = 'rgba(255,255,255,0.88)';
-        CTX.beginPath();
-        CTX.moveTo(20, -2.5);
-        CTX.lineTo(38, -3.5);
-        CTX.lineTo(38, -1.5);
-        CTX.lineTo(20, -1);
-        CTX.closePath(); CTX.fill();
-        // Lower prong
-        CTX.beginPath();
-        CTX.moveTo(20,  1);
-        CTX.lineTo(38,  1.5);
-        CTX.lineTo(38,  3.5);
-        CTX.lineTo(20,  2.5);
-        CTX.closePath(); CTX.fill();
-        // Barrel root connector
-        CTX.fillStyle = color + 'cc';
-        CTX.fillRect(18, -3.5, 4, 7);
-        CTX.shadowBlur = 0;
+        // Speed ring
+        if (now < (p.speedBoostUntil||0)) {
+            CTX.save();
+            CTX.globalAlpha = 0.4;
+            CTX.strokeStyle = '#ffdd00'; CTX.lineWidth = 2;
+            CTX.shadowBlur = 12; CTX.shadowColor = '#ffdd00';
+            CTX.beginPath(); CTX.arc(p.x, p.y, PLAYER_SIZE + 4 + Math.sin(gameState.time/140)*2, 0, Math.PI*2); CTX.stroke();
+            CTX.shadowBlur = 0; CTX.restore();
+        }
 
-        CTX.restore(); // end of rotated local space — back to world space
-
-        // ── Speed ring ────────────────────────────────────────────────────────
-        if (now < (p.speedBoostUntil || 0)) {
+        // Shield ring
+        if (now < (p.shieldUntil||0)) {
             CTX.save();
             CTX.globalAlpha = 0.45;
-            CTX.strokeStyle = '#e879f9'; CTX.lineWidth = 2;
-            CTX.shadowBlur = 14; CTX.shadowColor = '#e879f9';
-            const sr = PLAYER_SIZE + 5 + Math.sin(gameState.time / 140) * 2;
-            CTX.beginPath(); CTX.arc(p.x, p.y, sr, 0, Math.PI * 2); CTX.stroke();
-            // Two dashed ticks rotating
-            CTX.lineWidth = 1; CTX.globalAlpha = 0.3;
-            const ta = gameState.time / 300;
-            for (let i = 0; i < 4; i++) {
-                const a = ta + (i / 4) * Math.PI * 2;
-                CTX.beginPath();
-                CTX.arc(p.x, p.y, sr, a, a + 0.3);
-                CTX.stroke();
-            }
-            CTX.shadowBlur = 0; CTX.restore();
-        }
-
-        // ── Shield ring ───────────────────────────────────────────────────────
-        if (now < (p.shieldUntil || 0)) {
-            CTX.save();
-            CTX.globalAlpha = 0.5;
-            CTX.strokeStyle = '#c084fc'; CTX.lineWidth = 2.5;
-            CTX.shadowBlur = 22; CTX.shadowColor = '#c084fc';
-            CTX.beginPath(); CTX.arc(p.x, p.y, PLAYER_SIZE + 10, 0, Math.PI * 2); CTX.stroke();
+            CTX.strokeStyle = '#c084fc'; CTX.lineWidth = 3;
+            CTX.shadowBlur = 20; CTX.shadowColor = '#c084fc';
+            CTX.beginPath(); CTX.arc(p.x, p.y, PLAYER_SIZE+9, 0, Math.PI*2); CTX.stroke();
             CTX.globalAlpha = 0.15; CTX.lineWidth = 1;
-            CTX.beginPath(); CTX.arc(p.x, p.y, PLAYER_SIZE + 15, 0, Math.PI * 2); CTX.stroke();
+            CTX.beginPath(); CTX.arc(p.x, p.y, PLAYER_SIZE+14, 0, Math.PI*2); CTX.stroke();
             CTX.shadowBlur = 0; CTX.restore();
         }
 
-        // ── Dash cooldown arc ─────────────────────────────────────────────────
+        // Direction chevron
+        CTX.save();
+        CTX.translate(p.x, p.y); CTX.rotate(p.angle);
+        CTX.fillStyle = color; CTX.globalAlpha = 0.28;
+        CTX.beginPath();
+        CTX.moveTo(34, 0); CTX.lineTo(47, -9); CTX.lineTo(47, 9);
+        CTX.closePath(); CTX.fill();
+        CTX.restore();
+
+        // Dash cooldown arc — only on local player, fills as cooldown recharges
         if (!isEnemy) {
             const dashElapsed = Date.now() - dashLastUsed;
             const frac = Math.min(1, dashElapsed / DASH_COOLDOWN);
-            const arcR = PLAYER_SIZE + 17;
+            const arcR = PLAYER_SIZE + 16;
             CTX.save();
             CTX.translate(p.x, p.y);
-            // Track
-            CTX.strokeStyle = 'rgba(191,95,255,0.1)';
+            // Track (dim background arc)
+            CTX.strokeStyle = 'rgba(191,95,255,0.12)';
             CTX.lineWidth = 2;
-            CTX.beginPath(); CTX.arc(0, 0, arcR, 0, Math.PI * 2); CTX.stroke();
-            // Fill
-            CTX.strokeStyle = frac >= 1 ? 'rgba(255,255,255,0.6)' : 'rgba(191,95,255,0.5)';
-            CTX.shadowBlur  = frac >= 1 ? 8 : 0;
-            CTX.shadowColor = '#bf5fff';
+            CTX.beginPath();
+            CTX.arc(0, 0, arcR, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2);
+            CTX.stroke();
+            // Fill arc — white when ready, violet while charging
+            if (frac >= 1) {
+                CTX.strokeStyle = 'rgba(255,255,255,0.55)';
+                CTX.shadowBlur = 8; CTX.shadowColor = '#bf5fff';
+            } else {
+                CTX.strokeStyle = 'rgba(191,95,255,0.55)';
+                CTX.shadowBlur = 0;
+            }
             CTX.lineWidth = 2;
             CTX.beginPath();
             CTX.arc(0, 0, arcR, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);

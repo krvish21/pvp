@@ -8,7 +8,7 @@ window.GAME_CONFIG = {
 
   autoFireRange: 380,
   aimRange: 800,
-  fireRate: 130,
+  fireRate: 100,
   reloadTime: 2000,
   maxAmmo: 30,
 
