@@ -274,11 +274,57 @@
         #joystick { position:absolute; width:108px; height:108px; border-radius:50%; background:radial-gradient(circle,rgba(191,95,255,0.07) 0%,transparent 70%); border:1.5px solid rgba(191,95,255,0.22); pointer-events:none; display:none; transform:translate(-50%,-50%); }
         #joystickKnob { position:absolute; width:42px; height:42px; top:50%; left:50%; transform:translate(-50%,-50%); background:radial-gradient(circle at 35% 35%,rgba(191,95,255,0.7),rgba(0,145,60,0.48)); border-radius:50%; border:1px solid rgba(191,95,255,0.48); box-shadow:0 0 11px rgba(191,95,255,0.35); }
 
-        /* ═══════════════════════ CHAT (above bottom bar) ═══════════════════════ */
-        #chatPanel { position:absolute; bottom:58px; left:50%; transform:translateX(-50%); width:min(260px,60vw); z-index:120; pointer-events:auto; }
+        /* ═══════════════════════ CHAT (bottom-right, collapsible log) ═══════════════════════ */
+        #chatPanel {
+            position: absolute;
+            bottom: 58px;
+            right: 12px;
+            width: min(220px, 48vw);
+            z-index: 120;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        #chatLog {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.25s ease, opacity 0.25s ease;
+            opacity: 0;
+        }
+        #chatLog.visible {
+            max-height: 160px;
+            opacity: 1;
+        }
+        .chat-msg {
+            font-size: 0.62em;
+            letter-spacing: 0.04em;
+            padding: 3px 8px;
+            border-radius: 2px;
+            word-break: break-word;
+            background: rgba(10,4,14,0.78);
+            border-left: 2px solid rgba(191,95,255,0.3);
+            color: rgba(191,95,255,0.75);
+            animation: msgFade 4.5s forwards;
+        }
+        .chat-msg.from-enemy {
+            border-left-color: rgba(255,45,120,0.5);
+            color: rgba(255,45,120,0.8);
+        }
+        @keyframes msgFade { 0%,70%{opacity:1} 100%{opacity:0} }
         #chatInputRow { display:flex; gap:5px; }
-        #chatInput { flex:1; background:rgba(10,4,14,0.82); border:1px solid rgba(191,95,255,0.18); color:rgba(191,95,255,0.82); border-radius:2px; padding:7px 8px; font-family:var(--font-hud); font-size:0.7em; outline:none; letter-spacing:0.05em; }
+        #chatInput {
+            flex:1; background:rgba(10,4,14,0.82);
+            border:1px solid rgba(191,95,255,0.18);
+            color:rgba(191,95,255,0.82); border-radius:2px;
+            padding:7px 8px; font-family:var(--font-hud);
+            font-size:0.7em; outline:none; letter-spacing:0.05em;
+        }
         #chatInput:focus { border-color:rgba(191,95,255,0.42); }
+        #chatInput::placeholder { color:rgba(191,95,255,0.3); }
         #chatSendBtn { min-width:46px; padding:7px 8px; font-size:0.62em; border-radius:2px; }
         /* ═══════════════════════ SCANLINE ═══════════════════════ */
         .scanline { position:fixed; top:0; left:0; width:100%; height:100%; background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(191,95,255,0.01) 3px,rgba(191,95,255,0.01) 4px); pointer-events:none; z-index:1000; }
@@ -398,8 +444,9 @@
         <!-- Pause overlay -->
         <div id="pauseOverlay">PAUSED<br><span style="font-size:0.45em;opacity:0.6;font-family:var(--font-hud);font-weight:400">ANY PLAYER CAN RESUME</span></div>
 
-        <!-- Chat: above bottom bar -->
+        <!-- Chat: bottom-right, collapsible log -->
         <div id="chatPanel">
+            <div id="chatLog"></div>
             <div id="chatInputRow">
                 <input id="chatInput" type="text" maxlength="120" placeholder="SIGNAL..." autocomplete="off">
                 <button id="chatSendBtn" type="button">SEND</button>
@@ -947,7 +994,24 @@
         enemyAlertTimeout = setTimeout(() => { el.style.opacity = '0'; }, 1500);
     }
 
+    // ─── Chat log ─────────────────────────────────────────────────────────────
+    const chatLog = document.getElementById('chatLog');
+    let chatCollapseTimer = null;
+
+    function showChatLog() {
+        if (!chatLog) return;
+        chatLog.classList.add('visible');
+        clearTimeout(chatCollapseTimer);
+        chatCollapseTimer = setTimeout(collapseChatLog, 4000);
+    }
+
+    function collapseChatLog() {
+        if (!chatLog) return;
+        chatLog.classList.remove('visible');
+    }
+
     function addChatMessage(text, role) {
+        // Obstacle stamp (existing behaviour)
         if (role === 'me' || role === 'other') {
             const clean = text.replace(/^You:\s*/i, '').replace(/^Enemy:\s*/i, '').trim();
             if (clean) {
@@ -955,6 +1019,23 @@
                 if (obstacleChatStamps.length > 18) obstacleChatStamps.shift();
             }
         }
+
+        // Only render player messages (not internal system strings)
+        if (role !== 'me' && role !== 'other') return;
+
+        if (!chatLog) return;
+        const msg = document.createElement('div');
+        msg.className = 'chat-msg' + (role === 'other' ? ' from-enemy' : '');
+        msg.textContent = text;
+        chatLog.appendChild(msg);
+
+        // Keep max 5 messages
+        while (chatLog.children.length > 5) chatLog.removeChild(chatLog.firstChild);
+
+        // Remove the message element after its fade animation
+        setTimeout(() => msg.remove(), 4500);
+
+        showChatLog();
     }
 
     function sendChat() {
@@ -1462,12 +1543,17 @@
         hideJoystick();
     });
 
-    if (chatSendBtn) chatSendBtn.addEventListener('click', () => sendChat());
+    if (chatSendBtn) {
+        chatSendBtn.addEventListener('click', () => sendChat());
+        chatSendBtn.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+        chatSendBtn.addEventListener('mousedown', e => e.stopPropagation());
+    }
     if (pauseBtn) pauseBtn.addEventListener('click', () => togglePauseByMe());
     if (chatInput) {
         chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } });
-        chatInput.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
-        chatInput.addEventListener('mousedown', e => e.stopPropagation());
+        chatInput.addEventListener('focus',     () => showChatLog());
+        chatInput.addEventListener('touchstart', e => { e.stopPropagation(); showChatLog(); }, { passive: true });
+        chatInput.addEventListener('mousedown',  e => { e.stopPropagation(); });
     }
     document.addEventListener('keydown', e => {
         if ((e.key === 'p' || e.key === 'P') && gameState.gameStarted && document.activeElement !== chatInput) togglePauseByMe();
