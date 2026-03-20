@@ -4,17 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Find & Terminate - P2P Battle</title>
+    <title>NEON DUEL</title>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
         :root {
-            --neon-green: #00ff88;
-            --neon-red: #ff2244;
-            --neon-blue: #00d4ff;
-            --neon-yellow: #ffdd00;
-            --neon-orange: #ff6600;
+            --neon-green: #bf5fff;
+            --neon-red: #ff2d78;
+            --neon-blue: #c084fc;
+            --neon-yellow: #e879f9;
+            --neon-orange: #a855f7;
             --font-hud: 'Share Tech Mono', monospace;
             --font-title: 'Orbitron', monospace;
         }
@@ -29,7 +29,7 @@
         }
 
         body {
-            background: #060a0f;
+            background: #0a0612;
             overflow: hidden;
             font-family: var(--font-hud);
             color: var(--neon-green);
@@ -58,7 +58,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: radial-gradient(ellipse at 50% 40%, rgba(0,40,20,0.7) 0%, rgba(6,10,15,0.98) 70%);
+            background: radial-gradient(ellipse at 50% 35%, rgba(60,0,80,0.65) 0%, rgba(8,4,14,0.98) 70%);
             pointer-events: auto;
             padding: 20px;
         }
@@ -71,8 +71,8 @@
                 0deg,
                 transparent,
                 transparent 3px,
-                rgba(0,255,136,0.018) 3px,
-                rgba(0,255,136,0.018) 4px
+                rgba(191,95,255,0.018) 3px,
+                rgba(191,95,255,0.018) 4px
             );
             pointer-events: none;
         }
@@ -86,14 +86,14 @@
             font-size: 2.4em;
             font-weight: 900;
             color: var(--neon-green);
-            text-shadow: 0 0 30px rgba(0,255,136,0.9), 0 0 60px rgba(0,255,136,0.4), 0 0 100px rgba(0,255,136,0.2);
+            text-shadow: 0 0 30px rgba(191,95,255,0.9), 0 0 60px rgba(191,95,255,0.4), 0 0 100px rgba(191,95,255,0.2);
             margin-bottom: 8px;
             letter-spacing: 0.06em;
             text-align: center;
         }
 
         .subtitle {
-            color: rgba(0,255,136,0.5);
+            color: rgba(191,95,255,0.5);
             margin-bottom: 28px;
             font-size: 0.8em;
             text-align: center;
@@ -102,7 +102,7 @@
 
         button {
             background: transparent;
-            border: 1px solid rgba(0,255,136,0.5);
+            border: 1px solid rgba(191,95,255,0.5);
             color: var(--neon-green);
             padding: 14px 40px;
             font-size: 0.95em;
@@ -130,7 +130,7 @@
 
         button:hover {
             border-color: var(--neon-green);
-            box-shadow: 0 0 20px rgba(0,255,136,0.3), inset 0 0 20px rgba(0,255,136,0.05);
+            box-shadow: 0 0 20px rgba(191,95,255,0.3), inset 0 0 20px rgba(191,95,255,0.05);
         }
 
         button:disabled {
@@ -141,8 +141,8 @@
         button:disabled::before { display: none; }
 
         #peerId {
-            background: rgba(0,255,136,0.05);
-            border: 1px solid rgba(0,255,136,0.3);
+            background: rgba(191,95,255,0.05);
+            border: 1px solid rgba(191,95,255,0.3);
             color: var(--neon-green);
             padding: 14px 18px;
             font-size: 1.1em;
@@ -156,17 +156,17 @@
             outline: none;
         }
 
-        #peerId:focus { border-color: var(--neon-green); box-shadow: 0 0 12px rgba(0,255,136,0.2); }
+        #peerId:focus { border-color: var(--neon-green); box-shadow: 0 0 12px rgba(191,95,255,0.2); }
 
         #myId {
             font-family: var(--font-title);
             font-size: 1.6em;
             font-weight: 700;
             color: var(--neon-green);
-            text-shadow: 0 0 20px rgba(0,255,136,0.8);
-            background: rgba(0,255,136,0.05);
+            text-shadow: 0 0 20px rgba(191,95,255,0.8);
+            background: rgba(191,95,255,0.05);
             padding: 20px 28px;
-            border: 1px solid rgba(0,255,136,0.3);
+            border: 1px solid rgba(191,95,255,0.3);
             margin: 20px;
             word-break: break-all;
             text-align: center;
@@ -178,18 +178,18 @@
         #bottomBar {
             position:absolute; bottom:0; left:0; right:0; height:52px;
             display:flex; align-items:center; justify-content:space-between;
-            background:rgba(4,10,7,0.9); border-top:1px solid rgba(0,255,136,0.13);
+            background:rgba(10,4,14,0.9); border-top:1px solid rgba(191,95,255,0.13);
             padding:0 14px; z-index:100; pointer-events:none;
         }
         #bottomBar .bb-left { display:flex; flex-direction:column; gap:4px; width:180px; }
         .bb-bar-row { display:flex; align-items:center; gap:5px; }
-        .bb-icon { font-size:0.52em; color:rgba(0,255,136,0.38); width:20px; text-align:right; flex-shrink:0; letter-spacing:0.04em; }
+        .bb-icon { font-size:0.52em; color:rgba(191,95,255,0.38); width:20px; text-align:right; flex-shrink:0; letter-spacing:0.04em; }
         .seg-bar { display:flex; gap:1.5px; flex:1; }
         .seg-bar .seg { flex:1; height:6px; border-radius:1px; transition:background 0.1s,box-shadow 0.1s; }
-        .seg-bar.health .seg.active     { background:var(--neon-green); box-shadow:0 0 4px rgba(0,255,136,0.45); }
+        .seg-bar.health .seg.active     { background:var(--neon-green); box-shadow:0 0 4px rgba(191,95,255,0.45); }
         .seg-bar.health .seg.mid.active { background:var(--neon-yellow); box-shadow:0 0 3px rgba(255,221,0,0.5); }
-        .seg-bar.health .seg.low.active { background:var(--neon-red); box-shadow:0 0 4px rgba(255,34,68,0.6); animation:reloadPulse 0.6s infinite alternate; }
-        .seg-bar.health .seg.inactive   { background:rgba(0,255,136,0.07); }
+        .seg-bar.health .seg.low.active { background:var(--neon-red); box-shadow:0 0 4px rgba(255,45,120,0.6); animation:reloadPulse 0.6s infinite alternate; }
+        .seg-bar.health .seg.inactive   { background:rgba(191,95,255,0.07); }
         .seg-bar.ammo .seg.active       { background:var(--neon-blue); box-shadow:0 0 3px rgba(0,212,255,0.4); }
         .seg-bar.ammo .seg.inactive     { background:rgba(0,212,255,0.06); }
         .seg-bar.ammo .seg.reloading    { background:var(--neon-orange); animation:reloadPulse 0.35s infinite alternate; }
@@ -197,29 +197,29 @@
         #bottomBar .bb-center { display:flex; align-items:center; gap:12px; flex-shrink:0; }
         .bb-score-block { display:flex; flex-direction:column; align-items:center; min-width:36px; }
         .bb-score-num { font-family:var(--font-title); font-size:1.45em; font-weight:900; line-height:1; }
-        .bb-score-num.mine  { color:var(--neon-green); text-shadow:0 0 12px rgba(0,255,136,0.7); }
-        .bb-score-num.enemy { color:var(--neon-red);   text-shadow:0 0 12px rgba(255,34,68,0.6); }
-        .bb-score-lbl { font-size:0.42em; letter-spacing:0.16em; color:rgba(0,255,136,0.28); margin-top:1px; }
+        .bb-score-num.mine  { color:var(--neon-green); text-shadow:0 0 12px rgba(191,95,255,0.7); }
+        .bb-score-num.enemy { color:var(--neon-red);   text-shadow:0 0 12px rgba(255,45,120,0.6); }
+        .bb-score-lbl { font-size:0.42em; letter-spacing:0.16em; color:rgba(191,95,255,0.28); margin-top:1px; }
         .bb-divider { display:flex; flex-direction:column; align-items:center; gap:2px; }
-        .bb-divider-sep { font-size:0.42em; letter-spacing:0.1em; color:rgba(0,255,136,0.2); }
+        .bb-divider-sep { font-size:0.42em; letter-spacing:0.1em; color:rgba(191,95,255,0.2); }
         .bb-pips { display:flex; gap:4px; }
-        .score-pip { width:6px; height:6px; border-radius:50%; border:1px solid rgba(0,255,136,0.18); transition:all 0.2s; }
+        .score-pip { width:6px; height:6px; border-radius:50%; border:1px solid rgba(191,95,255,0.18); transition:all 0.2s; }
         .score-pip.mine-filled  { background:var(--neon-green); box-shadow:0 0 5px var(--neon-green); border-color:var(--neon-green); }
         .score-pip.enemy-filled { background:var(--neon-red);   box-shadow:0 0 5px var(--neon-red);   border-color:var(--neon-red); }
-        .bb-target-lbl { font-size:0.38em; letter-spacing:0.1em; color:rgba(0,255,136,0.2); }
+        .bb-target-lbl { font-size:0.38em; letter-spacing:0.1em; color:rgba(191,95,255,0.2); }
         #bottomBar .bb-right { display:flex; align-items:center; gap:12px; }
         .bb-stat { display:flex; flex-direction:column; align-items:center; }
-        .bb-stat-val { font-family:var(--font-title); font-size:0.88em; font-weight:700; color:var(--neon-green); text-shadow:0 0 7px rgba(0,255,136,0.5); line-height:1; }
-        .bb-stat-lbl { font-size:0.4em; letter-spacing:0.13em; color:rgba(0,255,136,0.28); }
+        .bb-stat-val { font-family:var(--font-title); font-size:0.88em; font-weight:700; color:var(--neon-green); text-shadow:0 0 7px rgba(191,95,255,0.5); line-height:1; }
+        .bb-stat-lbl { font-size:0.4em; letter-spacing:0.13em; color:rgba(191,95,255,0.28); }
 
         /* ═══════════════════════ PAUSE ═══════════════════════ */
-        #pauseBtn { pointer-events:auto; min-width:0; padding:4px 10px; font-size:0.58em; letter-spacing:0.1em; border:1px solid rgba(0,255,136,0.22); border-radius:2px; background:rgba(4,10,7,0.7); color:rgba(0,255,136,0.5); font-family:var(--font-hud); margin:0; }
-        #pauseOverlay { position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.55); color:var(--neon-green); font-family:var(--font-title); font-size:1.6em; font-weight:700; text-align:center; z-index:125; pointer-events:none; text-shadow:0 0 30px rgba(0,255,136,0.8); letter-spacing:0.1em; }
+        #pauseBtn { pointer-events:auto; min-width:0; padding:4px 10px; font-size:0.58em; letter-spacing:0.1em; border:1px solid rgba(191,95,255,0.22); border-radius:2px; background:rgba(10,4,14,0.7); color:rgba(191,95,255,0.5); font-family:var(--font-hud); margin:0; }
+        #pauseOverlay { position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.55); color:var(--neon-green); font-family:var(--font-title); font-size:1.6em; font-weight:700; text-align:center; z-index:125; pointer-events:none; text-shadow:0 0 30px rgba(191,95,255,0.8); letter-spacing:0.1em; }
 
         /* ═══════════════════════ RADAR (top-right) ═══════════════════════ */
         #radarContainer { position:absolute; top:12px; right:12px; z-index:50; pointer-events:none; }
-        #radarLabel { font-size:0.46em; letter-spacing:0.2em; color:rgba(0,255,136,0.28); text-align:center; margin-bottom:3px; }
-        #minimap { border-radius:50%; border:1.5px solid rgba(0,255,136,0.28); box-shadow:0 0 14px rgba(0,255,136,0.1); display:block; }
+        #radarLabel { font-size:0.46em; letter-spacing:0.2em; color:rgba(191,95,255,0.28); text-align:center; margin-bottom:3px; }
+        #minimap { border-radius:50%; border:1.5px solid rgba(191,95,255,0.28); box-shadow:0 0 14px rgba(191,95,255,0.1); display:block; }
 
         /* ═══════════════════════ KILL FEED (top-left) ═══════════════════════ */
         #killFeed { position:absolute; top:12px; left:12px; text-align:left; font-size:0.66em; max-width:180px; z-index:50; pointer-events:none; }
@@ -233,7 +233,7 @@
         #connectionStatus { position:absolute; top:12px; left:50%; transform:translateX(-50%); padding:3px 12px; border-radius:2px; font-size:0.56em; letter-spacing:0.14em; z-index:101; border:1px solid; pointer-events:none; }
         .connected    { display:none; }
         .connecting   { background:rgba(255,221,0,0.1); border-color:rgba(255,221,0,0.5); color:var(--neon-yellow); animation:pulse 1s infinite; }
-        .disconnected { background:rgba(255,34,68,0.1); border-color:rgba(255,34,68,0.5); color:var(--neon-red); }
+        .disconnected { background:rgba(255,45,120,0.1); border-color:rgba(255,45,120,0.5); color:var(--neon-red); }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
         /* ═══════════════════════ STREAK BANNER ═══════════════════════ */
@@ -249,49 +249,49 @@
         #enemyAlert { position:absolute; top:45%; left:50%; transform:translate(-50%,-50%); color:var(--neon-red); font-family:var(--font-title); font-size:0.65em; letter-spacing:0.3em; pointer-events:none; z-index:45; opacity:0; text-shadow:0 0 18px var(--neon-red); transition:opacity 0.2s; }
 
         /* ═══════════════════════ DAMAGE FLASH ═══════════════════════ */
-        #damageFlash { position:absolute; inset:0; background:rgba(255,34,68,0); pointer-events:none; z-index:200; transition:background 0.08s; }
+        #damageFlash { position:absolute; inset:0; background:rgba(255,45,120,0); pointer-events:none; z-index:200; transition:background 0.08s; }
 
         /* ═══════════════════════ FULL-SCREEN MOVABLE JOYSTICK ═══════════════════════ */
         #joystickZone { position:absolute; inset:0; bottom:52px; z-index:90; pointer-events:auto; }
-        #joystick { position:absolute; width:108px; height:108px; border-radius:50%; background:radial-gradient(circle,rgba(0,255,136,0.07) 0%,transparent 70%); border:1.5px solid rgba(0,255,136,0.22); pointer-events:none; display:none; transform:translate(-50%,-50%); }
-        #joystickKnob { position:absolute; width:42px; height:42px; top:50%; left:50%; transform:translate(-50%,-50%); background:radial-gradient(circle at 35% 35%,rgba(0,255,136,0.7),rgba(0,145,60,0.48)); border-radius:50%; border:1px solid rgba(0,255,136,0.48); box-shadow:0 0 11px rgba(0,255,136,0.35); }
+        #joystick { position:absolute; width:108px; height:108px; border-radius:50%; background:radial-gradient(circle,rgba(191,95,255,0.07) 0%,transparent 70%); border:1.5px solid rgba(191,95,255,0.22); pointer-events:none; display:none; transform:translate(-50%,-50%); }
+        #joystickKnob { position:absolute; width:42px; height:42px; top:50%; left:50%; transform:translate(-50%,-50%); background:radial-gradient(circle at 35% 35%,rgba(191,95,255,0.7),rgba(0,145,60,0.48)); border-radius:50%; border:1px solid rgba(191,95,255,0.48); box-shadow:0 0 11px rgba(191,95,255,0.35); }
 
         /* ═══════════════════════ CHAT (above bottom bar) ═══════════════════════ */
         #chatPanel { position:absolute; bottom:58px; left:50%; transform:translateX(-50%); width:min(260px,60vw); z-index:120; pointer-events:auto; }
         #chatInputRow { display:flex; gap:5px; }
-        #chatInput { flex:1; background:rgba(4,10,7,0.82); border:1px solid rgba(0,255,136,0.18); color:rgba(0,255,136,0.82); border-radius:2px; padding:7px 8px; font-family:var(--font-hud); font-size:0.7em; outline:none; letter-spacing:0.05em; }
-        #chatInput:focus { border-color:rgba(0,255,136,0.42); }
+        #chatInput { flex:1; background:rgba(10,4,14,0.82); border:1px solid rgba(191,95,255,0.18); color:rgba(191,95,255,0.82); border-radius:2px; padding:7px 8px; font-family:var(--font-hud); font-size:0.7em; outline:none; letter-spacing:0.05em; }
+        #chatInput:focus { border-color:rgba(191,95,255,0.42); }
         #chatSendBtn { min-width:46px; padding:7px 8px; font-size:0.62em; border-radius:2px; }
         /* ═══════════════════════ SCANLINE ═══════════════════════ */
-        .scanline { position:fixed; top:0; left:0; width:100%; height:100%; background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,136,0.01) 3px,rgba(0,255,136,0.01) 4px); pointer-events:none; z-index:1000; }
+        .scanline { position:fixed; top:0; left:0; width:100%; height:100%; background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(191,95,255,0.01) 3px,rgba(191,95,255,0.01) 4px); pointer-events:none; z-index:1000; }
 
         /* ═══════════════════════ SCREENS ═══════════════════════ */
-        .error-box { background:rgba(255,34,68,0.1); border:1px solid rgba(255,34,68,0.4); color:var(--neon-red); padding:10px 16px; margin:10px; max-width:90%; text-align:center; font-size:0.8em; letter-spacing:0.06em; }
-        .info-text { color:rgba(0,255,136,0.35); font-size:0.72em; margin:10px; text-align:center; max-width:90%; letter-spacing:0.06em; }
-        .loading { display:inline-block; width:18px; height:18px; border:2px solid rgba(0,255,136,0.2); border-top-color:var(--neon-green); border-radius:50%; animation:spin 1s linear infinite; }
+        .error-box { background:rgba(255,45,120,0.1); border:1px solid rgba(255,45,120,0.4); color:var(--neon-red); padding:10px 16px; margin:10px; max-width:90%; text-align:center; font-size:0.8em; letter-spacing:0.06em; }
+        .info-text { color:rgba(191,95,255,0.35); font-size:0.72em; margin:10px; text-align:center; max-width:90%; letter-spacing:0.06em; }
+        .loading { display:inline-block; width:18px; height:18px; border:2px solid rgba(191,95,255,0.2); border-top-color:var(--neon-green); border-radius:50%; animation:spin 1s linear infinite; }
         @keyframes spin { to{transform:rotate(360deg)} }
 
         /* ═══════════════════════ KILL TARGET PICKER ═══════════════════════ */
         #killTargetPicker { display:flex; flex-direction:column; align-items:center; gap:10px; margin:14px 0 20px; }
-        #killTargetPicker label { font-size:0.72em; letter-spacing:0.2em; color:rgba(0,255,136,0.5); }
+        #killTargetPicker label { font-size:0.72em; letter-spacing:0.2em; color:rgba(191,95,255,0.5); }
         .ktp-row { display:flex; gap:8px; }
-        .ktp-btn { min-width:52px; padding:10px 0; font-size:1em; font-family:var(--font-title); font-weight:700; letter-spacing:0.05em; border:1px solid rgba(0,255,136,0.3); background:transparent; color:rgba(0,255,136,0.55); cursor:pointer; transition:all 0.15s; }
-        .ktp-btn.selected,.ktp-btn:hover { background:rgba(0,255,136,0.1); border-color:var(--neon-green); color:var(--neon-green); box-shadow:0 0 12px rgba(0,255,136,0.2); }
+        .ktp-btn { min-width:52px; padding:10px 0; font-size:1em; font-family:var(--font-title); font-weight:700; letter-spacing:0.05em; border:1px solid rgba(191,95,255,0.3); background:transparent; color:rgba(191,95,255,0.55); cursor:pointer; transition:all 0.15s; }
+        .ktp-btn.selected,.ktp-btn:hover { background:rgba(191,95,255,0.1); border-color:var(--neon-green); color:var(--neon-green); box-shadow:0 0 12px rgba(191,95,255,0.2); }
 
         /* ═══════════════════════ ROUND TALLY ═══════════════════════ */
         .round-tally { display:flex; gap:6px; margin:8px 0 4px; align-items:center; }
-        .tally-label { font-size:0.58em; letter-spacing:0.2em; color:rgba(0,255,136,0.35); margin-right:4px; }
-        .tally-pip { width:12px; height:12px; border-radius:50%; border:1px solid rgba(0,255,136,0.25); }
+        .tally-label { font-size:0.58em; letter-spacing:0.2em; color:rgba(191,95,255,0.35); margin-right:4px; }
+        .tally-pip { width:12px; height:12px; border-radius:50%; border:1px solid rgba(191,95,255,0.25); }
         .tally-pip.win  { background:var(--neon-green); box-shadow:0 0 8px var(--neon-green); }
         .tally-pip.loss { background:var(--neon-red);   box-shadow:0 0 8px var(--neon-red); }
 
         /* ═══════════════════════ GAME OVER ═══════════════════════ */
         #gameOverScreen h1 { font-size:3em; }
-        #finalScore { color:rgba(0,255,136,0.6); margin:6px 0 16px; letter-spacing:0.1em; font-size:0.85em; }
+        #finalScore { color:rgba(191,95,255,0.6); margin:6px 0 16px; letter-spacing:0.1em; font-size:0.85em; }
         .stat-box { display:flex; gap:32px; margin:10px 0 20px; }
         .stat-item { text-align:center; }
-        .stat-item .val { font-family:var(--font-title); font-size:2.2em; font-weight:900; color:var(--neon-green); text-shadow:0 0 20px rgba(0,255,136,0.8); }
-        .stat-item .lbl { font-size:0.6em; letter-spacing:0.2em; color:rgba(0,255,136,0.4); }
+        .stat-item .val { font-family:var(--font-title); font-size:2.2em; font-weight:900; color:var(--neon-green); text-shadow:0 0 20px rgba(191,95,255,0.8); }
+        .stat-item .lbl { font-size:0.6em; letter-spacing:0.2em; color:rgba(191,95,255,0.4); }
     </style>
 <base target="_blank">
 </head>
@@ -303,8 +303,8 @@
 <div id="ui">
     <!-- Main Menu -->
     <div id="menuScreen" class="screen">
-        <h1>⚡ FIND & TERMINATE</h1>
-        <p class="subtitle">P2P TACTICAL COMBAT // v2.0</p>
+        <h1>◈ NEON DUEL</h1>
+        <p class="subtitle">TWO PLAYERS. ONE SURVIVES.</p>
         <div id="killTargetPicker">
             <label>KILL TARGET</label>
             <div class="ktp-row">
@@ -315,15 +315,15 @@
             </div>
         </div>
         <button onclick="showHost()" id="hostBtn">HOST GAME</button>
-        <button onclick="showJoin()" id="joinBtn">JOIN GAME</button>
+        <button onclick="showJoin()" id="joinBtn">JOIN MATCH</button>
         <p class="info-text">Both players need internet for initial connection.<br>Gameplay is P2P after connected.</p>
     </div>
 
     <!-- Host Screen -->
     <div id="hostScreen" class="screen hidden">
-        <h1>HOSTING GAME</h1>
+        <h1>HOSTING MATCH</h1>
         <div id="hostLoading" class="loading hidden"></div>
-        <p style="font-size:0.8em; letter-spacing:0.15em; color:rgba(0,255,136,0.5)">SHARE THIS ID WITH OPPONENT</p>
+        <p style="font-size:0.8em; letter-spacing:0.15em; color:rgba(191,95,255,0.5)">SHARE CODE WITH OPPONENT</p>
         <div id="myId">Initializing...</div>
         <button onclick="copyId()" id="copyBtn">COPY ID</button>
         <p class="info-text" id="hostStatus">Waiting for peer...</p>
@@ -332,9 +332,9 @@
 
     <!-- Join Screen -->
     <div id="joinScreen" class="screen hidden">
-        <h1>JOIN GAME</h1>
-        <p style="font-size:0.8em; letter-spacing:0.15em; color:rgba(0,255,136,0.5); margin-bottom:6px">ENTER HOST ID</p>
-        <input type="text" id="peerId" placeholder="PASTE HOST ID" maxlength="20">
+        <h1>JOIN MATCH</h1>
+        <p style="font-size:0.8em; letter-spacing:0.15em; color:rgba(191,95,255,0.5); margin-bottom:6px">ENTER MATCH CODE</p>
+        <input type="text" id="peerId" placeholder="PASTE CODE" maxlength="20">
         <button onclick="joinGame()" id="joinGameBtn">CONNECT</button>
         <div id="joinError" class="error-box hidden"></div>
         <p class="info-text">Make sure you have a stable internet connection</p>
@@ -345,7 +345,7 @@
     <div id="gameUI" class="hidden" style="position:absolute;width:100%;height:100%;pointer-events:none;">
 
         <div id="damageFlash"></div>
-        <div id="enemyAlert">⚠ ENEMY SPOTTED</div>
+        <div id="enemyAlert">◈ HOSTILE DETECTED</div>
         <div id="connectionStatus" class="disconnected">OFFLINE</div>
 
         <!-- Radar: top-right -->
@@ -358,7 +358,7 @@
         <div id="killFeed"></div>
 
         <!-- Reload: above bottom bar -->
-        <div id="reloadIndicator">◌ RELOADING</div>
+        <div id="reloadIndicator">▸ RELOADING</div>
 
         <!-- Streak banner -->
         <div id="streakBanner">
@@ -369,21 +369,21 @@
         <!-- Crosshair -->
         <div id="crosshair">
             <svg width="26" height="26" viewBox="0 0 26 26">
-                <circle cx="13" cy="13" r="5" fill="none" stroke="rgba(0,255,136,0.6)" stroke-width="1"/>
-                <line x1="13" y1="0"  x2="13" y2="8"  stroke="rgba(0,255,136,0.4)" stroke-width="1"/>
-                <line x1="13" y1="18" x2="13" y2="26" stroke="rgba(0,255,136,0.4)" stroke-width="1"/>
-                <line x1="0"  y1="13" x2="8"  y2="13" stroke="rgba(0,255,136,0.4)" stroke-width="1"/>
-                <line x1="18" y1="13" x2="26" y2="13" stroke="rgba(0,255,136,0.4)" stroke-width="1"/>
+                <circle cx="13" cy="13" r="5" fill="none" stroke="rgba(191,95,255,0.6)" stroke-width="1"/>
+                <line x1="13" y1="0"  x2="13" y2="8"  stroke="rgba(191,95,255,0.4)" stroke-width="1"/>
+                <line x1="13" y1="18" x2="13" y2="26" stroke="rgba(191,95,255,0.4)" stroke-width="1"/>
+                <line x1="0"  y1="13" x2="8"  y2="13" stroke="rgba(191,95,255,0.4)" stroke-width="1"/>
+                <line x1="18" y1="13" x2="26" y2="13" stroke="rgba(191,95,255,0.4)" stroke-width="1"/>
             </svg>
         </div>
 
         <!-- Pause overlay -->
-        <div id="pauseOverlay">PAUSED<br><span style="font-size:0.45em;opacity:0.6;font-family:var(--font-hud);font-weight:400">EITHER PLAYER CAN RESUME</span></div>
+        <div id="pauseOverlay">PAUSED<br><span style="font-size:0.45em;opacity:0.6;font-family:var(--font-hud);font-weight:400">ANY PLAYER CAN RESUME</span></div>
 
         <!-- Chat: above bottom bar -->
         <div id="chatPanel">
             <div id="chatInputRow">
-                <input id="chatInput" type="text" maxlength="120" placeholder="COMMS..." autocomplete="off">
+                <input id="chatInput" type="text" maxlength="120" placeholder="SIGNAL..." autocomplete="off">
                 <button id="chatSendBtn" type="button">SEND</button>
             </div>
         </div>
@@ -442,7 +442,7 @@
     </div>
     <!-- Game Over -->
     <div id="gameOverScreen" class="screen hidden">
-        <h1 id="winnerText">TERMINATED</h1>
+        <h1 id="winnerText">SIGNAL LOST</h1>
         <p id="finalScore"></p>
         <div class="stat-box">
             <div class="stat-item">
@@ -553,7 +553,7 @@
         }
         if (enemyKills >= killTarget) {
             roundHistory.push('loss');
-            endGame('TERMINATED');
+            endGame('SIGNAL LOST');
             return true;
         }
         return false;
@@ -569,7 +569,7 @@
         { count: 2, word: 'DOUBLE KILL',  sub: '×2 ELIMINATIONS', color: '#ffdd00', size: '2em'  },
         { count: 3, word: 'TRIPLE KILL',  sub: '×3 ELIMINATIONS', color: '#ff9900', size: '2.2em' },
         { count: 4, word: 'KILLING SPREE',sub: 'ON FIRE',          color: '#ff5500', size: '2.4em' },
-        { count: 5, word: 'UNSTOPPABLE',  sub: 'DOMINATING',       color: '#ff2244', size: '2.6em' },
+        { count: 5, word: 'UNSTOPPABLE',  sub: 'DOMINATING',       color: '#ff2d78', size: '2.6em' },
     ];
 
     function registerKillStreak() {
@@ -686,7 +686,7 @@
         angle: 0, aimAngle: 0,
         hp: 100, maxHp: 100, ammo: MAX_AMMO,
         reloading: false, kills: 0, deaths: 0,
-        lastFire: 0, color: '#00ff88',
+        lastFire: 0, color: '#bf5fff',
         deathPending: false,
         speedBoostUntil: 0, shieldUntil: 0
     };
@@ -764,8 +764,8 @@
     function triggerDamageFlash() {
         const el = document.getElementById('damageFlash');
         if (!el) return;
-        el.style.background = 'rgba(255,34,68,0.22)';
-        setTimeout(() => { el.style.background = 'rgba(255,34,68,0)'; }, 180);
+        el.style.background = 'rgba(255,45,120,0.22)';
+        setTimeout(() => { el.style.background = 'rgba(255,45,120,0)'; }, 180);
     }
 
     // ─── Enemy Alert ──────────────────────────────────────────────────────────
@@ -805,7 +805,7 @@
             pauseOverlay.style.display = gameState.paused ? 'flex' : 'none';
             if (gameState.paused) {
                 const who = source === 'me' ? 'YOU PAUSED' : (source === 'enemy' ? 'ENEMY PAUSED' : 'PAUSED');
-                pauseOverlay.innerHTML = `${who}<br><span style="font-size:0.45em; opacity:0.6; font-family:var(--font-hud); font-weight:400; letter-spacing:0.15em">EITHER PLAYER CAN RESUME</span>`;
+                pauseOverlay.innerHTML = `${who}<br><span style="font-size:0.45em; opacity:0.6; font-family:var(--font-hud); font-weight:400; letter-spacing:0.15em">ANY PLAYER CAN RESUME</span>`;
             }
         }
         if (pauseBtn) pauseBtn.textContent = gameState.paused ? 'RESUME' : 'PAUSE';
@@ -1198,7 +1198,7 @@
         enemyPlayer = {
             x: pickSafeSpawn(spawnIdx ^ 1).x,
             y: pickSafeSpawn(spawnIdx ^ 1).y,
-            angle: 0, hp: 100, color: '#ff2244',
+            angle: 0, hp: 100, color: '#ff2d78',
             speedBoostUntil: 0, shieldUntil: 0
         };
 
@@ -1489,7 +1489,7 @@
     }
 
     function createBullet(x, y, angle, isMine) {
-        gameState.bullets.push({ x, y, angle, owner: isMine ? gameState.myId : gameState.peerId, life: BULLET_LIFE, color: isMine ? '#00ff88' : '#ff2244' });
+        gameState.bullets.push({ x, y, angle, owner: isMine ? gameState.myId : gameState.peerId, life: BULLET_LIFE, color: isMine ? '#bf5fff' : '#ff2d78' });
     }
 
     function reload() {
@@ -1508,7 +1508,7 @@
     function createBloodSplatter(x, y) {
         for (let i = 0; i < 10; i++) {
             const angle = (Math.PI*2*i)/10 + Math.random()*0.5, speed = 2 + Math.random()*3;
-            gameState.particles.push({ x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 25, color: '#ff2244', size: 3 + Math.random()*3 });
+            gameState.particles.push({ x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 25, color: '#ff2d78', size: 3 + Math.random()*3 });
         }
     }
 
@@ -1530,7 +1530,7 @@
     function handleDeath(killer) {
         if (myPlayer.deathPending) return;
         myPlayer.deathPending = true; myPlayer.deaths++;
-        addKillFeed(killer === 'hazard' ? 'ELIMINATED BY ENVIRONMENT' : 'YOU WERE TERMINATED');
+        addKillFeed(killer === 'hazard' ? 'LOST TO THE GRID' : 'YOU WERE SIGNAL LOST');
         createExplosion(myPlayer.x, myPlayer.y);
         setTimeout(() => respawn(), 2000);
     }
@@ -1538,10 +1538,10 @@
     function handleKill() {
         myPlayer.kills++;
         registerKillStreak();
-        addKillFeed('ENEMY TERMINATED');
+        addKillFeed('ENEMY SIGNAL LOST');
         updateHUD();
         updateScoreDisplay();
-        send({ type: 'killFeed', text: 'ENEMY TERMINATED YOU' });
+        send({ type: 'killFeed', text: 'ENEMY SIGNAL LOST YOU' });
         send({ type: 'enemyScore', kills: myPlayer.kills });
         createExplosion(enemyPlayer.x, enemyPlayer.y);
         checkRoundOver();
@@ -1604,7 +1604,7 @@
             CTX.translate(sx, sy);
             CTX.rotate(rot);
             CTX.globalAlpha = f.alpha * pulse;
-            CTX.strokeStyle = '#00ff88';
+            CTX.strokeStyle = '#bf5fff';
             CTX.lineWidth = 1;
             CTX.beginPath();
             const sides = f.sides;
@@ -1634,7 +1634,7 @@
         for (const d of DEBRIS) {
             if (d.wx < vL-80 || d.wx > vR+80 || d.wy < vT-80 || d.wy > vB+80) continue;
             CTX.globalAlpha = d.alpha;
-            CTX.strokeStyle = '#00ff88';
+            CTX.strokeStyle = '#bf5fff';
             CTX.lineWidth = 1;
             CTX.beginPath();
             const ex = d.wx + Math.cos(d.angle) * d.len;
@@ -1654,7 +1654,7 @@
             }
             // Dot at corners
             CTX.globalAlpha = d.alpha * 1.6;
-            CTX.fillStyle = '#00ff88';
+            CTX.fillStyle = '#bf5fff';
             CTX.beginPath(); CTX.arc(d.wx, d.wy, 1.5, 0, Math.PI*2); CTX.fill();
             CTX.beginPath(); CTX.arc(ex, ey, 1.5, 0, Math.PI*2); CTX.fill();
         }
@@ -1664,21 +1664,21 @@
         for (const s of STARS) {
             if (s.x < vL-40 || s.x > vR+40 || s.y < vT-40 || s.y > vB+40) continue;
             CTX.globalAlpha = s.a * (0.6 + 0.4 * Math.sin(gameState.time/800 + s.x*0.01));
-            CTX.fillStyle = '#00ff88';
+            CTX.fillStyle = '#bf5fff';
             CTX.beginPath(); CTX.arc(s.x, s.y, s.r, 0, Math.PI*2); CTX.fill();
         }
         CTX.globalAlpha = 1;
 
         // ── Grid ──
-        CTX.strokeStyle = 'rgba(0,255,136,0.055)';
+        CTX.strokeStyle = 'rgba(191,95,255,0.055)';
         CTX.lineWidth = 1;
         for (let x = 0; x <= WORLD_SIZE; x += 160) { CTX.beginPath(); CTX.moveTo(x,0); CTX.lineTo(x,WORLD_SIZE); CTX.stroke(); }
         for (let y = 0; y <= WORLD_SIZE; y += 160) { CTX.beginPath(); CTX.moveTo(0,y); CTX.lineTo(WORLD_SIZE,y); CTX.stroke(); }
 
         // ── World border ──
-        CTX.strokeStyle = 'rgba(0,255,136,0.5)';
+        CTX.strokeStyle = 'rgba(191,95,255,0.5)';
         CTX.lineWidth = 4;
-        CTX.shadowBlur = 15; CTX.shadowColor = '#00ff88';
+        CTX.shadowBlur = 15; CTX.shadowColor = '#bf5fff';
         CTX.strokeRect(2, 2, WORLD_SIZE-4, WORLD_SIZE-4);
         CTX.shadowBlur = 0;
 
@@ -1706,8 +1706,8 @@
         }
         CTX.globalAlpha = 1;
 
-        if (enemyPlayer && enemyPlayer.hp > 0) drawPlayer(enemyPlayer, '#ff2244', true);
-        if (myPlayer.hp > 0) drawPlayer(myPlayer, '#00ff88', false);
+        if (enemyPlayer && enemyPlayer.hp > 0) drawPlayer(enemyPlayer, '#ff2d78', true);
+        if (myPlayer.hp > 0) drawPlayer(myPlayer, '#bf5fff', false);
 
         drawEnemyArrow();
 
@@ -1764,7 +1764,7 @@
 
         // Outer glow pass (wide, soft)
         CTX.shadowBlur = 14;
-        CTX.shadowColor = `rgba(255,34,68,${alpha * 0.5})`;
+        CTX.shadowColor = `rgba(255,45,120,${alpha * 0.5})`;
 
         // Thin sleek chevron: just three lines forming a ">"
         const W = 11;  // half-span
@@ -1822,17 +1822,17 @@
 
             // Body
             const g = CTX.createLinearGradient(obs.x, obs.y, obs.x+obs.w, obs.y+obs.h);
-            g.addColorStop(0, obs.type==='wall' ? '#2a3a32' : (obs.type==='center' ? '#243348' : '#1e2a40'));
-            g.addColorStop(1, '#0c1018');
+            g.addColorStop(0, obs.type==='wall' ? '#2a1a3a' : (obs.type==='center' ? '#1e1040' : '#1a0a2e'));
+            g.addColorStop(1, '#0a0418');
             CTX.fillStyle = g;
             CTX.fillRect(obs.x, obs.y, obs.w, obs.h);
 
             // Top highlight
-            CTX.fillStyle = 'rgba(0,255,136,0.04)';
+            CTX.fillStyle = 'rgba(191,95,255,0.04)';
             CTX.fillRect(obs.x+2, obs.y+2, obs.w-4, Math.max(2, obs.h*0.07));
 
             // Seams
-            CTX.strokeStyle = 'rgba(0,255,136,0.12)';
+            CTX.strokeStyle = 'rgba(191,95,255,0.12)';
             CTX.lineWidth = 1;
             CTX.beginPath();
             CTX.moveTo(obs.x+obs.w*0.2, obs.y+2); CTX.lineTo(obs.x+obs.w*0.2, obs.y+obs.h-2);
@@ -1840,15 +1840,15 @@
             CTX.stroke();
 
             // Border
-            CTX.strokeStyle = 'rgba(0,255,136,0.45)';
+            CTX.strokeStyle = 'rgba(191,95,255,0.45)';
             CTX.lineWidth = 1.5;
-            CTX.shadowBlur = 8; CTX.shadowColor = 'rgba(0,255,136,0.3)';
+            CTX.shadowBlur = 8; CTX.shadowColor = 'rgba(191,95,255,0.3)';
             CTX.strokeRect(obs.x, obs.y, obs.w, obs.h);
             CTX.shadowBlur = 0;
 
             // Corners
             const cd = 7;
-            CTX.fillStyle = 'rgba(0,255,136,0.7)';
+            CTX.fillStyle = 'rgba(191,95,255,0.7)';
             CTX.fillRect(obs.x-1, obs.y-1, cd, cd);
             CTX.fillRect(obs.x+obs.w-cd+1, obs.y-1, cd, cd);
             CTX.fillRect(obs.x-1, obs.y+obs.h-cd+1, cd, cd);
@@ -1862,7 +1862,7 @@
                 CTX.beginPath(); CTX.rect(obs.x+4, obs.y+4, obs.w-8, obs.h-8); CTX.clip();
                 CTX.font = `${fontSize}px 'Share Tech Mono', monospace`;
                 CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-                CTX.globalAlpha = 0.14; CTX.fillStyle = '#00ff88';
+                CTX.globalAlpha = 0.14; CTX.fillStyle = '#bf5fff';
                 CTX.translate(obs.x+obs.w/2, obs.y+obs.h/2);
                 CTX.rotate(((idx%5)-2)*0.03);
                 CTX.fillText(txt, 0, 0);
@@ -1906,8 +1906,8 @@
 
             const alpha = Math.max(0, Math.min(1, pulse.life));
             CTX.globalAlpha = 0.5 * alpha;
-            CTX.strokeStyle = '#00d4ff'; CTX.lineWidth = 2;
-            CTX.shadowBlur = 28; CTX.shadowColor = '#00d4ff';
+            CTX.strokeStyle = '#c084fc'; CTX.lineWidth = 2;
+            CTX.shadowBlur = 28; CTX.shadowColor = '#c084fc';
             CTX.beginPath(); CTX.arc(pulse.x, pulse.y, pulse.r, 0, Math.PI*2); CTX.stroke();
             CTX.globalAlpha = 0.16 * alpha; CTX.lineWidth = 1;
             CTX.beginPath(); CTX.arc(pulse.x, pulse.y, Math.max(6, pulse.r*0.65), 0, Math.PI*2); CTX.stroke();
@@ -1925,7 +1925,7 @@
         for (const pk of gameState.pickups) {
             const pulse = 0.8 + 0.2 * Math.sin(gameState.time/200 + pk.x*0.01);
             const r = pk.size * (0.9 + 0.1*pulse);
-            const colors = { speed: '#ffdd00', health: '#ff4466', shield: '#00d4ff' };
+            const colors = { speed: '#ffdd00', health: '#ff4466', shield: '#c084fc' };
             const icons  = { speed: '>>', health: '+', shield: 'S' };
 
             // Magnet pull ring — fades in as player enters magnet radius
@@ -1947,7 +1947,7 @@
             CTX.shadowBlur = 20; CTX.globalAlpha = 0.88;
             CTX.beginPath(); CTX.arc(pk.x, pk.y, r, 0, Math.PI*2); CTX.fill();
             CTX.shadowBlur = 0; CTX.globalAlpha = 1;
-            CTX.fillStyle = '#001'; CTX.font = `700 13px 'Share Tech Mono'`;
+            CTX.fillStyle = '#0e0018'; CTX.font = `700 13px 'Share Tech Mono'`;
             CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
             CTX.fillText(icons[pk.type], pk.x, pk.y);
         }
@@ -1964,10 +1964,10 @@
             const barW = 52, barH = 7, bx = -barW/2, by = -48;
             CTX.fillStyle = 'rgba(0,0,0,0.6)';
             CTX.fillRect(bx-1, by-1, barW+2, barH+2);
-            CTX.fillStyle = 'rgba(255,34,68,0.25)';
+            CTX.fillStyle = 'rgba(255,45,120,0.25)';
             CTX.fillRect(bx, by, barW, barH);
             const hpPct = Math.max(0, p.hp/100);
-            const hpColor = hpPct > 0.55 ? color : (hpPct > 0.25 ? '#ffdd00' : '#ff2244');
+            const hpColor = hpPct > 0.55 ? color : (hpPct > 0.25 ? '#ffdd00' : '#ff2d78');
             CTX.fillStyle = hpColor;
             CTX.shadowBlur = 6; CTX.shadowColor = hpColor;
             CTX.fillRect(bx, by, barW * hpPct, barH);
@@ -2013,8 +2013,8 @@
         if (now < (p.shieldUntil||0)) {
             CTX.save();
             CTX.globalAlpha = 0.45;
-            CTX.strokeStyle = '#00d4ff'; CTX.lineWidth = 3;
-            CTX.shadowBlur = 20; CTX.shadowColor = '#00d4ff';
+            CTX.strokeStyle = '#c084fc'; CTX.lineWidth = 3;
+            CTX.shadowBlur = 20; CTX.shadowColor = '#c084fc';
             CTX.beginPath(); CTX.arc(p.x, p.y, PLAYER_SIZE+9, 0, Math.PI*2); CTX.stroke();
             CTX.globalAlpha = 0.15; CTX.lineWidth = 1;
             CTX.beginPath(); CTX.arc(p.x, p.y, PLAYER_SIZE+14, 0, Math.PI*2); CTX.stroke();
@@ -2037,7 +2037,7 @@
         const scale = (R - 8) / (WORLD_SIZE / 2); // map world coords → radar pixels
 
         // Background
-        MINI_CTX.fillStyle = '#020d06';
+        MINI_CTX.fillStyle = '#080412';
         MINI_CTX.beginPath(); MINI_CTX.arc(cx, cy, R, 0, Math.PI*2); MINI_CTX.fill();
 
         // Clip to circle
@@ -2045,14 +2045,14 @@
         MINI_CTX.beginPath(); MINI_CTX.arc(cx, cy, R, 0, Math.PI*2); MINI_CTX.clip();
 
         // Concentric rings
-        MINI_CTX.strokeStyle = 'rgba(0,255,136,0.12)';
+        MINI_CTX.strokeStyle = 'rgba(191,95,255,0.12)';
         MINI_CTX.lineWidth = 1;
         for (let i = 1; i <= 3; i++) {
             MINI_CTX.beginPath(); MINI_CTX.arc(cx, cy, R * i/3, 0, Math.PI*2); MINI_CTX.stroke();
         }
 
         // Cross hairs
-        MINI_CTX.strokeStyle = 'rgba(0,255,136,0.1)'; MINI_CTX.lineWidth = 1;
+        MINI_CTX.strokeStyle = 'rgba(191,95,255,0.1)'; MINI_CTX.lineWidth = 1;
         MINI_CTX.beginPath(); MINI_CTX.moveTo(cx-R, cy); MINI_CTX.lineTo(cx+R, cy); MINI_CTX.stroke();
         MINI_CTX.beginPath(); MINI_CTX.moveTo(cx, cy-R); MINI_CTX.lineTo(cx, cy+R); MINI_CTX.stroke();
 
@@ -2060,7 +2060,7 @@
         MINI_CTX.save();
         const sweepArc = 0.28; // width of glow sector
         MINI_CTX.globalAlpha = 0.18;
-        MINI_CTX.fillStyle = '#00ff88';
+        MINI_CTX.fillStyle = '#bf5fff';
         MINI_CTX.beginPath();
         MINI_CTX.moveTo(cx, cy);
         MINI_CTX.arc(cx, cy, R, radarAngle - sweepArc, radarAngle);
@@ -2069,9 +2069,9 @@
 
         // Brighter leading edge
         MINI_CTX.globalAlpha = 0.55;
-        MINI_CTX.strokeStyle = '#00ff88';
+        MINI_CTX.strokeStyle = '#bf5fff';
         MINI_CTX.lineWidth = 1.5;
-        MINI_CTX.shadowBlur = 8; MINI_CTX.shadowColor = '#00ff88';
+        MINI_CTX.shadowBlur = 8; MINI_CTX.shadowColor = '#bf5fff';
         MINI_CTX.beginPath();
         MINI_CTX.moveTo(cx, cy);
         MINI_CTX.lineTo(cx + Math.cos(radarAngle)*R, cy + Math.sin(radarAngle)*R);
@@ -2082,7 +2082,7 @@
 
         // Obstacles
         const mapS = (R*2) / WORLD_SIZE;
-        MINI_CTX.fillStyle = 'rgba(0,255,136,0.18)';
+        MINI_CTX.fillStyle = 'rgba(191,95,255,0.18)';
         for (const obs of OBSTACLES) {
             MINI_CTX.fillRect(obs.x*mapS, obs.y*mapS, obs.w*mapS, obs.h*mapS);
         }
@@ -2091,7 +2091,7 @@
         for (const pk of gameState.pickups) {
             const px = cx + (pk.x - myPlayer.x) * scale;
             const py = cy + (pk.y - myPlayer.y) * scale;
-            const colors = { speed: '#ffdd00', health: '#ff4466', shield: '#00d4ff' };
+            const colors = { speed: '#ffdd00', health: '#ff4466', shield: '#c084fc' };
             MINI_CTX.fillStyle = colors[pk.type] || '#fff';
             MINI_CTX.beginPath(); MINI_CTX.arc(px, py, 2, 0, Math.PI*2); MINI_CTX.fill();
         }
@@ -2101,26 +2101,26 @@
             const ex = cx + radarEnemyBlip.x * scale;
             const ey = cy + radarEnemyBlip.y * scale;
             MINI_CTX.globalAlpha = radarEnemyBlip.alpha;
-            MINI_CTX.fillStyle = '#ff2244';
-            MINI_CTX.shadowBlur = 10; MINI_CTX.shadowColor = '#ff2244';
+            MINI_CTX.fillStyle = '#ff2d78';
+            MINI_CTX.shadowBlur = 10; MINI_CTX.shadowColor = '#ff2d78';
             MINI_CTX.beginPath(); MINI_CTX.arc(ex, ey, 4, 0, Math.PI*2); MINI_CTX.fill();
             // Blip pulse ring
             MINI_CTX.globalAlpha = radarEnemyBlip.alpha * 0.4;
-            MINI_CTX.strokeStyle = '#ff2244'; MINI_CTX.lineWidth = 1;
+            MINI_CTX.strokeStyle = '#ff2d78'; MINI_CTX.lineWidth = 1;
             MINI_CTX.beginPath(); MINI_CTX.arc(ex, ey, 7, 0, Math.PI*2); MINI_CTX.stroke();
             MINI_CTX.shadowBlur = 0; MINI_CTX.globalAlpha = 1;
         }
 
         // Self dot (always visible, center)
-        MINI_CTX.fillStyle = '#00ff88';
-        MINI_CTX.shadowBlur = 8; MINI_CTX.shadowColor = '#00ff88';
+        MINI_CTX.fillStyle = '#bf5fff';
+        MINI_CTX.shadowBlur = 8; MINI_CTX.shadowColor = '#bf5fff';
         MINI_CTX.beginPath(); MINI_CTX.arc(cx, cy, 4, 0, Math.PI*2); MINI_CTX.fill();
         MINI_CTX.shadowBlur = 0;
 
         MINI_CTX.restore();
 
         // Outer ring
-        MINI_CTX.strokeStyle = 'rgba(0,255,136,0.4)';
+        MINI_CTX.strokeStyle = 'rgba(191,95,255,0.4)';
         MINI_CTX.lineWidth = 1.5;
         MINI_CTX.beginPath(); MINI_CTX.arc(cx, cy, R, 0, Math.PI*2); MINI_CTX.stroke();
     }
@@ -2143,8 +2143,8 @@
         document.getElementById('winnerText').textContent = reason || 'GAME OVER';
         document.getElementById('winnerText').style.color = reason === 'VICTORY' ? 'var(--neon-green)' : 'var(--neon-red)';
         document.getElementById('winnerText').style.textShadow = reason === 'VICTORY'
-            ? '0 0 30px rgba(0,255,136,0.9), 0 0 60px rgba(0,255,136,0.4)'
-            : '0 0 30px rgba(255,34,68,0.9), 0 0 60px rgba(255,34,68,0.4)';
+            ? '0 0 30px rgba(191,95,255,0.9), 0 0 60px rgba(191,95,255,0.4)'
+            : '0 0 30px rgba(255,45,120,0.9), 0 0 60px rgba(255,45,120,0.4)';
         document.getElementById('finalScore').textContent = `${myPlayer.kills} – ${enemyKills}  ·  TARGET: ${killTarget}`;
         document.getElementById('goKills').textContent  = myPlayer.kills;
         document.getElementById('goDeaths').textContent = myPlayer.deaths;
