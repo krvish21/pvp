@@ -174,7 +174,38 @@
             letter-spacing: 0.15em;
         }
 
-        /* ═══════════════════════ BOTTOM BAR ═══════════════════════ */
+        /* ═══════════════════════ TOP-LEFT SCORE PANEL ═══════════════════════ */
+        #scorePanel {
+            position:absolute; top:12px; left:12px;
+            background:rgba(10,4,14,0.88);
+            border:1px solid rgba(191,95,255,0.2);
+            border-radius:3px;
+            padding:8px 12px;
+            z-index:100; pointer-events:none;
+            min-width:130px;
+        }
+        #scorePanel::before {
+            content:''; position:absolute; top:0; left:10px; right:10px; height:1px;
+            background:linear-gradient(90deg,transparent,var(--neon-green),transparent);
+            opacity:0.4;
+        }
+        .sp-row {
+            display:flex; align-items:center; justify-content:space-between; gap:10px;
+        }
+        .sp-side { display:flex; flex-direction:column; align-items:center; min-width:32px; }
+        .sp-num { font-family:var(--font-title); font-size:1.6em; font-weight:900; line-height:1; }
+        .sp-num.mine  { color:var(--neon-green); text-shadow:0 0 12px rgba(191,95,255,0.7); }
+        .sp-num.enemy { color:var(--neon-red);   text-shadow:0 0 12px rgba(255,45,120,0.6); }
+        .sp-lbl { font-size:0.4em; letter-spacing:0.16em; color:rgba(191,95,255,0.3); margin-top:1px; }
+        .sp-mid { display:flex; flex-direction:column; align-items:center; gap:3px; }
+        .sp-sep { font-size:0.38em; letter-spacing:0.1em; color:rgba(191,95,255,0.22); }
+        .sp-pips { display:flex; gap:3px; flex-wrap:wrap; max-width:70px; justify-content:center; }
+        .score-pip { width:6px; height:6px; border-radius:50%; border:1px solid rgba(191,95,255,0.18); transition:all 0.2s; }
+        .score-pip.mine-filled  { background:var(--neon-green); box-shadow:0 0 5px var(--neon-green); border-color:var(--neon-green); }
+        .score-pip.enemy-filled { background:var(--neon-red);   box-shadow:0 0 5px var(--neon-red);   border-color:var(--neon-red); }
+        .sp-target { font-size:0.36em; letter-spacing:0.1em; color:rgba(191,95,255,0.2); }
+
+        /* ═══════════════════════ BOTTOM BAR (HP + ammo | stats + pause) ═══════════════════════ */
         #bottomBar {
             position:absolute; bottom:0; left:0; right:0; height:52px;
             display:flex; align-items:center; justify-content:space-between;
@@ -194,19 +225,6 @@
         .seg-bar.ammo .seg.inactive     { background:rgba(0,212,255,0.06); }
         .seg-bar.ammo .seg.reloading    { background:var(--neon-orange); animation:reloadPulse 0.35s infinite alternate; }
         @keyframes reloadPulse { from{opacity:0.3} to{opacity:1} }
-        #bottomBar .bb-center { display:flex; align-items:center; gap:12px; flex-shrink:0; }
-        .bb-score-block { display:flex; flex-direction:column; align-items:center; min-width:36px; }
-        .bb-score-num { font-family:var(--font-title); font-size:1.45em; font-weight:900; line-height:1; }
-        .bb-score-num.mine  { color:var(--neon-green); text-shadow:0 0 12px rgba(191,95,255,0.7); }
-        .bb-score-num.enemy { color:var(--neon-red);   text-shadow:0 0 12px rgba(255,45,120,0.6); }
-        .bb-score-lbl { font-size:0.42em; letter-spacing:0.16em; color:rgba(191,95,255,0.28); margin-top:1px; }
-        .bb-divider { display:flex; flex-direction:column; align-items:center; gap:2px; }
-        .bb-divider-sep { font-size:0.42em; letter-spacing:0.1em; color:rgba(191,95,255,0.2); }
-        .bb-pips { display:flex; gap:4px; }
-        .score-pip { width:6px; height:6px; border-radius:50%; border:1px solid rgba(191,95,255,0.18); transition:all 0.2s; }
-        .score-pip.mine-filled  { background:var(--neon-green); box-shadow:0 0 5px var(--neon-green); border-color:var(--neon-green); }
-        .score-pip.enemy-filled { background:var(--neon-red);   box-shadow:0 0 5px var(--neon-red);   border-color:var(--neon-red); }
-        .bb-target-lbl { font-size:0.38em; letter-spacing:0.1em; color:rgba(191,95,255,0.2); }
         #bottomBar .bb-right { display:flex; align-items:center; gap:12px; }
         .bb-stat { display:flex; flex-direction:column; align-items:center; }
         .bb-stat-val { font-family:var(--font-title); font-size:0.88em; font-weight:700; color:var(--neon-green); text-shadow:0 0 7px rgba(191,95,255,0.5); line-height:1; }
@@ -221,8 +239,8 @@
         #radarLabel { font-size:0.46em; letter-spacing:0.2em; color:rgba(191,95,255,0.28); text-align:center; margin-bottom:3px; }
         #minimap { border-radius:50%; border:1.5px solid rgba(191,95,255,0.28); box-shadow:0 0 14px rgba(191,95,255,0.1); display:block; }
 
-        /* ═══════════════════════ KILL FEED (top-left) ═══════════════════════ */
-        #killFeed { position:absolute; top:12px; left:12px; text-align:left; font-size:0.66em; max-width:180px; z-index:50; pointer-events:none; }
+        /* ═══════════════════════ KILL FEED (top-left, below score panel) ═══════════════════════ */
+        #killFeed { position:absolute; top:120px; left:12px; text-align:left; font-size:0.66em; max-width:180px; z-index:50; pointer-events:none; }
         .kill-msg { color:var(--neon-yellow); margin:3px 0; animation:fadeOut 3s forwards; background:rgba(0,0,0,0.68); padding:4px 9px; border-left:2px solid var(--neon-yellow); letter-spacing:0.04em; }
         @keyframes fadeOut { 0%,75%{opacity:1} 100%{opacity:0} }
 
@@ -395,7 +413,26 @@
             </div>
         </div>
 
-        <!-- Bottom bar: HP+ammo | score | stats+pause -->
+        <!-- Score panel: top-left -->
+        <div id="scorePanel">
+            <div class="sp-row">
+                <div class="sp-side">
+                    <span class="sp-num mine" id="myScore">0</span>
+                    <span class="sp-lbl">YOU</span>
+                </div>
+                <div class="sp-mid">
+                    <span class="sp-sep">FIRST TO</span>
+                    <div class="sp-pips" id="scorePips"></div>
+                    <span class="sp-target" id="targetLabel">10</span>
+                </div>
+                <div class="sp-side">
+                    <span class="sp-num enemy" id="enemyScore">0</span>
+                    <span class="sp-lbl">ENEMY</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom bar: HP+ammo | stats+pause -->
         <div id="bottomBar">
             <div class="bb-left">
                 <div class="bb-bar-row">
@@ -405,21 +442,6 @@
                 <div class="bb-bar-row">
                     <span class="bb-icon" id="ammoText">30</span>
                     <div class="seg-bar ammo" id="ammoSegs"></div>
-                </div>
-            </div>
-            <div class="bb-center">
-                <div class="bb-score-block">
-                    <span class="bb-score-num mine" id="myScore">0</span>
-                    <span class="bb-score-lbl">YOU</span>
-                </div>
-                <div class="bb-divider">
-                    <span class="bb-divider-sep">FIRST TO</span>
-                    <div class="bb-pips" id="scorePips"></div>
-                    <span class="bb-target-lbl" id="targetLabel">10</span>
-                </div>
-                <div class="bb-score-block">
-                    <span class="bb-score-num enemy" id="enemyScore">0</span>
-                    <span class="bb-score-lbl">ENEMY</span>
                 </div>
             </div>
             <div class="bb-right">
