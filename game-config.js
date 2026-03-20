@@ -4,7 +4,7 @@ window.GAME_CONFIG = {
   worldSize: 3200,
   playerSize: 30,
   playerCollisionRadius: 20,
-  playerSpeed: 7,
+  playerSpeed: 10,
 
   autoFireRange: 380,
   aimRange: 800,
@@ -25,6 +25,10 @@ window.GAME_CONFIG = {
   shieldDuration: 10500,
   shieldDamageMultiplier: 0.55,
   healthPickupAmount: 28,
+
+  // Dash ability
+  dashDistance: 200,     // world-px teleported per dash
+  dashCooldownMs: 4000,  // ms before dash is available again
 
   // Procedural map
   mapSeed: null,         // null = new random seed every round; set a number to replay a specific map
