@@ -4,7 +4,7 @@ window.GAME_CONFIG = {
   worldSize: 3200,
   playerSize: 30,
   playerCollisionRadius: 20,
-  playerSpeed: 10,
+  playerSpeed: 7,
 
   autoFireRange: 380,
   aimRange: 800,

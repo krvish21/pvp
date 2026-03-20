@@ -681,9 +681,9 @@
     }
 
     // ─── Animated Background Floaters ───────────────────────────────────────
-    // Large slow-drifting hex grid tiles and debris in screen-space
+    // Large slow-drifting hex/quad shapes in screen-space
     const FLOATERS = Array.from({ length: 22 }, (_, i) => ({
-        x: Math.random(),       // 0-1 normalised screen fraction (recomputed each frame)
+        x: Math.random(),
         y: Math.random(),
         size: 60 + Math.random() * 180,
         speed: 0.008 + Math.random() * 0.018,
@@ -694,7 +694,7 @@
         phase: Math.random() * Math.PI * 2
     }));
 
-    // World-space debris: floating circuit-board fragments that scroll with camera
+    // World-space circuit-board debris (scrolls with camera)
     const DEBRIS = Array.from({ length: 60 }, () => ({
         wx: Math.random() * WORLD_SIZE,
         wy: Math.random() * WORLD_SIZE,
@@ -703,11 +703,43 @@
         alpha: 0.04 + Math.random() * 0.07,
         branches: Math.random() < 0.4
     }));
+
+    // World-space stars (twinkle)
     const STARS = Array.from({ length: 240 }, () => ({
         x: Math.random() * WORLD_SIZE,
         y: Math.random() * WORLD_SIZE,
         r: Math.random() * 1.6 + 0.2,
         a: Math.random() * 0.5 + 0.25
+    }));
+
+    // ── NEW: Screen-space micro-dust — hundreds of tiny shimmer dots ──────────
+    const DUST = Array.from({ length: 320 }, () => ({
+        x: Math.random(),           // normalised 0-1
+        y: Math.random(),
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.4 + Math.random() * 1.2,   // shimmer speed
+        alpha: 0.04 + Math.random() * 0.1,  // base opacity (kept subtle)
+        hue: Math.random() < 0.7 ? 'violet' : 'magenta' // mix of colors
+    }));
+
+    // ── NEW: World-space cross sparks — small + marks on the arena floor ──────
+    const CROSS_SPARKS = Array.from({ length: 80 }, () => ({
+        wx: Math.random() * WORLD_SIZE,
+        wy: Math.random() * WORLD_SIZE,
+        size: 4 + Math.random() * 10,
+        alpha: 0.06 + Math.random() * 0.1,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.3 + Math.random() * 0.8
+    }));
+
+    // ── NEW: World-space pulse rings — large slow-breathing sonar circles ─────
+    const PULSE_RINGS = Array.from({ length: 6 }, () => ({
+        wx: 400 + Math.random() * (WORLD_SIZE - 800),
+        wy: 400 + Math.random() * (WORLD_SIZE - 800),
+        radius: 180 + Math.random() * 400,
+        alpha: 0.025 + Math.random() * 0.035,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.15 + Math.random() * 0.3
     }));
 
     const SPAWN_POINTS = [
@@ -1885,6 +1917,19 @@
         }
         CTX.restore();
 
+        // ── Micro-dust: screen-space shimmer dots ──────────────────────────────
+        CTX.save();
+        for (const d of DUST) {
+            const flicker = 0.5 + 0.5 * Math.sin(t * d.speed + d.phase);
+            CTX.globalAlpha = d.alpha * flicker;
+            CTX.fillStyle = d.hue === 'violet' ? '#bf5fff' : '#ff2d78';
+            const px = d.x * CANVAS.width;
+            const py = d.y * CANVAS.height;
+            CTX.fillRect(px, py, 1, 1);
+        }
+        CTX.globalAlpha = 1;
+        CTX.restore();
+
         CTX.save();
         CTX.scale(ZOOM, ZOOM);
         CTX.translate(-gameState.camera.x, -gameState.camera.y);
@@ -1933,6 +1978,40 @@
             CTX.beginPath(); CTX.arc(s.x, s.y, s.r, 0, Math.PI*2); CTX.fill();
         }
         CTX.globalAlpha = 1;
+
+        // ── Cross sparks: small + marks on the arena floor ────────────────────
+        CTX.save();
+        for (const cs of CROSS_SPARKS) {
+            if (cs.wx < vL-20 || cs.wx > vR+20 || cs.wy < vT-20 || cs.wy > vB+20) continue;
+            const flicker = 0.5 + 0.5 * Math.sin(t * cs.speed + cs.phase);
+            CTX.globalAlpha = cs.alpha * flicker;
+            CTX.strokeStyle = '#bf5fff';
+            CTX.lineWidth = 0.8;
+            const s = cs.size;
+            CTX.beginPath();
+            CTX.moveTo(cs.wx - s, cs.wy); CTX.lineTo(cs.wx + s, cs.wy);
+            CTX.moveTo(cs.wx, cs.wy - s); CTX.lineTo(cs.wx, cs.wy + s);
+            CTX.stroke();
+        }
+        CTX.globalAlpha = 1;
+        CTX.restore();
+
+        // ── Pulse rings: slow-breathing sonar circles ─────────────────────────
+        CTX.save();
+        for (const pr of PULSE_RINGS) {
+            if (pr.wx + pr.radius < vL || pr.wx - pr.radius > vR ||
+                pr.wy + pr.radius < vT || pr.wy - pr.radius > vB) continue;
+            const breathe = 0.5 + 0.5 * Math.sin(t * pr.speed + pr.phase);
+            CTX.globalAlpha = pr.alpha * breathe;
+            CTX.strokeStyle = '#bf5fff';
+            CTX.lineWidth = 0.8;
+            CTX.beginPath(); CTX.arc(pr.wx, pr.wy, pr.radius, 0, Math.PI*2); CTX.stroke();
+            // Second ring slightly inside
+            CTX.globalAlpha = pr.alpha * breathe * 0.4;
+            CTX.beginPath(); CTX.arc(pr.wx, pr.wy, pr.radius * 0.72, 0, Math.PI*2); CTX.stroke();
+        }
+        CTX.globalAlpha = 1;
+        CTX.restore();
 
         // ── Grid ──
         CTX.strokeStyle = 'rgba(191,95,255,0.055)';
