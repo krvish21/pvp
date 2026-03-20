@@ -18,6 +18,8 @@ window.GAME_CONFIG = {
 
   // Pickups
   pickupRespawnMs: 6500,
+  pickupMagnetRadius: 120,   // px — pickup starts drifting toward player within this distance
+  pickupMagnetSpeed: 4,      // px/frame — max drift speed (scales up as pickup gets closer)
   speedBoostMultiplier: 1.7,
   speedBoostDuration: 10500,
   shieldDuration: 10500,

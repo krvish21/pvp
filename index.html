@@ -482,6 +482,8 @@
     const RELOAD_TIME = CFG.reloadTime ?? 2000;
     const MAX_AMMO = CFG.maxAmmo ?? 30;
     const PICKUP_RESPAWN_MS = CFG.pickupRespawnMs ?? 6500;
+    const PICKUP_MAGNET_RADIUS = CFG.pickupMagnetRadius ?? 120; // px — pickup starts drifting toward player within this distance
+    const PICKUP_MAGNET_SPEED  = CFG.pickupMagnetSpeed  ?? 4;   // px/frame — max drift speed toward player
     const SPEED_BOOST_MULTIPLIER = CFG.speedBoostMultiplier ?? 1.7;
     const SPEED_BOOST_DURATION = CFG.speedBoostDuration ?? 3500;
     const SHIELD_DURATION = CFG.shieldDuration ?? 4200;
@@ -1346,11 +1348,27 @@
         maybeSpawnPulse();
         if (updatePulses(dtSec)) return;
 
-        // Pickups
+        // Pickups — magnet drift + collection
         for (let i = gameState.pickups.length-1; i >= 0; i--) {
             const pk = gameState.pickups[i];
             const dx = pk.x - myPlayer.x, dy = pk.y - myPlayer.y;
-            if ((dx*dx + dy*dy) <= (pk.size + PLAYER_COLLISION_RADIUS)**2) {
+            const distSq = dx*dx + dy*dy;
+
+            // Magnet: drift toward player when within radius
+            if (distSq < PICKUP_MAGNET_RADIUS * PICKUP_MAGNET_RADIUS) {
+                const dist = Math.sqrt(distSq);
+                if (dist > 0.5) {
+                    // Speed scales up as pickup gets closer (ease-in pull)
+                    const t = 1 - dist / PICKUP_MAGNET_RADIUS; // 0 at edge, 1 at centre
+                    const speed = PICKUP_MAGNET_SPEED * (0.3 + 0.7 * t);
+                    pk.x -= (dx / dist) * speed;
+                    pk.y -= (dy / dist) * speed;
+                }
+            }
+
+            // Collection: slightly generous radius so mobile feels snappy
+            const collectRadius = pk.size + PLAYER_COLLISION_RADIUS + 6;
+            if (distSq <= collectRadius * collectRadius) {
                 if (pk.type === 'speed') { myPlayer.speedBoostUntil = nowMs + SPEED_BOOST_DURATION; addKillFeed('SPEED BOOST +'); }
                 else if (pk.type === 'shield') { myPlayer.shieldUntil = nowMs + SHIELD_DURATION; addKillFeed('SHIELD ACTIVE'); }
                 else { myPlayer.hp = Math.min(myPlayer.maxHp, myPlayer.hp + HEALTH_PICKUP_AMOUNT); updateHUD(); addKillFeed(`+${HEALTH_PICKUP_AMOUNT} INTEGRITY`); }
@@ -1908,7 +1926,23 @@
             const pulse = 0.8 + 0.2 * Math.sin(gameState.time/200 + pk.x*0.01);
             const r = pk.size * (0.9 + 0.1*pulse);
             const colors = { speed: '#ffdd00', health: '#ff4466', shield: '#00d4ff' };
-            const icons = { speed: '>>', health: '+', shield: 'S' };
+            const icons  = { speed: '>>', health: '+', shield: 'S' };
+
+            // Magnet pull ring — fades in as player enters magnet radius
+            const dxM = pk.x - myPlayer.x, dyM = pk.y - myPlayer.y;
+            const distM = Math.sqrt(dxM*dxM + dyM*dyM);
+            if (distM < PICKUP_MAGNET_RADIUS) {
+                const ringAlpha = (1 - distM / PICKUP_MAGNET_RADIUS) * 0.38;
+                CTX.save();
+                CTX.globalAlpha = ringAlpha;
+                CTX.strokeStyle = colors[pk.type];
+                CTX.lineWidth = 1;
+                CTX.beginPath();
+                CTX.arc(pk.x, pk.y, r + 8 + Math.sin(gameState.time/150)*3, 0, Math.PI*2);
+                CTX.stroke();
+                CTX.restore();
+            }
+
             CTX.shadowColor = colors[pk.type]; CTX.fillStyle = colors[pk.type];
             CTX.shadowBlur = 20; CTX.globalAlpha = 0.88;
             CTX.beginPath(); CTX.arc(pk.x, pk.y, r, 0, Math.PI*2); CTX.fill();
