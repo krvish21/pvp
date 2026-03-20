@@ -177,505 +177,185 @@
             letter-spacing: 0.15em;
         }
 
-        /* ═══════════════════════ HUD ═══════════════════════ */
-        #hud {
-            position: absolute;
-            top: 14px;
-            left: 14px;
-            pointer-events: none;
-            z-index: 50;
+        /* ═══════════════════════ LANDSCAPE LOCK ═══════════════════════ */
+        @media (orientation: portrait) { #rotatePrompt { display: flex !important; } }
+        #rotatePrompt {
+            display: none; position: fixed; inset: 0; z-index: 9999;
+            background: #060a0f; flex-direction: column;
+            align-items: center; justify-content: center; gap: 18px;
+            font-family: var(--font-title); color: var(--neon-green);
+            text-shadow: 0 0 20px rgba(0,255,136,0.6);
+            font-size: 1em; letter-spacing: 0.15em; text-align: center;
+        }
+        #rotatePrompt svg { animation: rotateHint 2.2s ease-in-out infinite; }
+        @keyframes rotateHint { 0%,100%{transform:rotate(0deg)} 40%,60%{transform:rotate(-90deg)} }
+
+        /* ═══════════════════════ TOP BAR ═══════════════════════ */
+        #topBar {
+            position: absolute; top:0; left:0; right:0; height:48px;
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(4,10,7,0.9);
+            border-bottom: 1px solid rgba(0,255,136,0.13);
+            padding: 0 14px; z-index: 100; pointer-events: none;
+        }
+        #topBar .tb-left { display:flex; flex-direction:column; gap:4px; width:200px; }
+        .tb-bar-row { display:flex; align-items:center; gap:5px; }
+        .tb-bar-icon { font-size:0.52em; letter-spacing:0.06em; color:rgba(0,255,136,0.38); width:22px; text-align:right; flex-shrink:0; }
+        .seg-bar { display:flex; gap:1.5px; flex:1; }
+        .seg-bar .seg { flex:1; height:6px; border-radius:1px; transition:background 0.1s,box-shadow 0.1s; }
+        .seg-bar.health .seg.active     { background:var(--neon-green); box-shadow:0 0 4px rgba(0,255,136,0.45); }
+        .seg-bar.health .seg.mid.active { background:var(--neon-yellow); box-shadow:0 0 3px rgba(255,221,0,0.5); }
+        .seg-bar.health .seg.low.active { background:var(--neon-red); box-shadow:0 0 4px rgba(255,34,68,0.6); animation:reloadPulse 0.6s infinite alternate; }
+        .seg-bar.health .seg.inactive   { background:rgba(0,255,136,0.07); }
+        .seg-bar.ammo .seg.active       { background:var(--neon-blue); box-shadow:0 0 3px rgba(0,212,255,0.4); }
+        .seg-bar.ammo .seg.inactive     { background:rgba(0,212,255,0.06); }
+        .seg-bar.ammo .seg.reloading    { background:var(--neon-orange); animation:reloadPulse 0.35s infinite alternate; }
+        @keyframes reloadPulse { from{opacity:0.3} to{opacity:1} }
+        #topBar .tb-center { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+        .tb-score-block { display:flex; flex-direction:column; align-items:center; min-width:38px; }
+        .tb-score-num { font-family:var(--font-title); font-size:1.4em; font-weight:900; line-height:1; }
+        .tb-score-num.mine  { color:var(--neon-green); text-shadow:0 0 12px rgba(0,255,136,0.7); }
+        .tb-score-num.enemy { color:var(--neon-red);   text-shadow:0 0 12px rgba(255,34,68,0.6); }
+        .tb-score-lbl { font-size:0.42em; letter-spacing:0.16em; color:rgba(0,255,136,0.28); margin-top:1px; }
+        .tb-divider { display:flex; flex-direction:column; align-items:center; gap:3px; }
+        .tb-divider-sep { font-family:var(--font-title); font-size:1em; color:rgba(0,255,136,0.22); line-height:1; }
+        .tb-pips { display:flex; gap:4px; }
+        .score-pip { width:6px; height:6px; border-radius:50%; border:1px solid rgba(0,255,136,0.18); transition:all 0.2s; }
+        .score-pip.mine-filled  { background:var(--neon-green); box-shadow:0 0 5px var(--neon-green); border-color:var(--neon-green); }
+        .score-pip.enemy-filled { background:var(--neon-red);   box-shadow:0 0 5px var(--neon-red);   border-color:var(--neon-red); }
+        .tb-target-lbl { font-size:0.4em; letter-spacing:0.12em; color:rgba(0,255,136,0.22); }
+        #topBar .tb-right { display:flex; align-items:center; gap:12px; }
+        .tb-stat { display:flex; flex-direction:column; align-items:center; }
+        .tb-stat-val { font-family:var(--font-title); font-size:0.9em; font-weight:700; color:var(--neon-green); text-shadow:0 0 8px rgba(0,255,136,0.5); line-height:1; }
+        .tb-stat-lbl { font-size:0.42em; letter-spacing:0.14em; color:rgba(0,255,136,0.28); }
+
+        /* ═══════════════════════ PAUSE BTN ═══════════════════════ */
+        #pauseBtn {
+            pointer-events:auto; min-width:0; padding:4px 10px;
+            font-size:0.58em; letter-spacing:0.1em;
+            border:1px solid rgba(0,255,136,0.22); border-radius:2px;
+            background:rgba(4,10,7,0.7); color:rgba(0,255,136,0.5);
+            font-family:var(--font-hud); margin:0;
+        }
+        #pauseOverlay {
+            position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+            background:rgba(0,0,0,0.55); color:var(--neon-green);
+            font-family:var(--font-title); font-size:1.6em; font-weight:700;
+            text-align:center; z-index:125; pointer-events:none;
+            text-shadow:0 0 30px rgba(0,255,136,0.8); letter-spacing:0.1em;
         }
 
-        .hud-panel {
-            background: rgba(4,12,8,0.82);
-            border: 1px solid rgba(0,255,136,0.18);
-            border-radius: 3px;
-            padding: 8px 10px;
-            width: 160px;
-            position: relative;
-        }
-
-        /* Top accent line */
-        .hud-panel::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 12px; right: 12px;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--neon-green), transparent);
-            opacity: 0.5;
-        }
-
-        /* Each bar row: icon + bar side by side */
-        .hud-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 5px;
-        }
-        .hud-row:last-child { margin-bottom: 0; }
-
-        .hud-icon {
-            font-size: 0.6em;
-            letter-spacing: 0.1em;
-            color: rgba(0,255,136,0.4);
-            width: 24px;
-            flex-shrink: 0;
-            text-align: right;
-        }
-
-        /* Segmented bars */
-        .seg-bar {
-            display: flex;
-            gap: 1.5px;
-            flex: 1;
-        }
-        .seg-bar .seg {
-            flex: 1;
-            height: 7px;
-            border-radius: 1px;
-            transition: background 0.12s, box-shadow 0.12s;
-        }
-
-        /* Health */
-        .seg-bar.health .seg.active     { background: var(--neon-green); box-shadow: 0 0 4px rgba(0,255,136,0.5); }
-        .seg-bar.health .seg.mid.active { background: var(--neon-yellow); box-shadow: 0 0 4px rgba(255,221,0,0.5); }
-        .seg-bar.health .seg.low.active { background: var(--neon-red);    box-shadow: 0 0 4px rgba(255,34,68,0.6); animation: reloadPulse 0.6s infinite alternate; }
-        .seg-bar.health .seg.inactive   { background: rgba(0,255,136,0.08); }
-
-        /* Ammo */
-        .seg-bar.ammo .seg.active    { background: var(--neon-blue); box-shadow: 0 0 3px rgba(0,212,255,0.4); }
-        .seg-bar.ammo .seg.inactive  { background: rgba(0,212,255,0.07); }
-        .seg-bar.ammo .seg.reloading { background: var(--neon-orange); animation: reloadPulse 0.35s infinite alternate; }
-
-        @keyframes reloadPulse { from { opacity: 0.35; } to { opacity: 1; } }
-
-        /* Inline stat chips: kills · deaths · ping */
-        .hud-chips {
-            display: flex;
-            gap: 6px;
-            margin-top: 6px;
-            padding-top: 5px;
-            border-top: 1px solid rgba(0,255,136,0.1);
-        }
-        .hud-chip {
-            font-size: 0.6em;
-            letter-spacing: 0.08em;
-            color: rgba(0,255,136,0.45);
-        }
-        .hud-chip span {
-            font-family: var(--font-title);
-            font-size: 1.2em;
-            font-weight: 700;
-            color: var(--neon-green);
-            text-shadow: 0 0 8px rgba(0,255,136,0.6);
-            margin-left: 2px;
-        }
-
-        /* ═══════════════════════ RADAR MINIMAP ═══════════════════════ */
-        #radarContainer {
-            position: absolute;
-            top: 14px;
-            right: 14px;
-            z-index: 50;
-            pointer-events: none;
-        }
-
-        #radarLabel {
-            font-size: 0.55em;
-            letter-spacing: 0.25em;
-            color: rgba(0,255,136,0.4);
-            text-align: center;
-            margin-bottom: 3px;
-        }
-
-        #minimap {
-            border-radius: 50%;
-            border: 2px solid rgba(0,255,136,0.35);
-            box-shadow: 0 0 20px rgba(0,255,136,0.15), inset 0 0 20px rgba(0,0,0,0.8);
-        }
-
-        /* ═══════════════════════ JOYSTICK ═══════════════════════ */
-        #joystick {
-            left: 50%;
-            transform: translateX(-50%);
-            bottom: 60px;
-            width: 140px;
-            height: 140px;
-            background: radial-gradient(circle, rgba(0,255,136,0.08) 0%, rgba(0,255,136,0.02) 70%);
-            border: 2px solid rgba(0,255,136,0.3);
-            border-radius: 50%;
-            position: absolute;
-            box-shadow: 0 0 20px rgba(0,255,136,0.1);
-        }
-
-        #joystickKnob {
-            width: 56px;
-            height: 56px;
-            background: radial-gradient(circle at 35% 35%, rgba(0,255,136,0.8), rgba(0,180,80,0.6));
-            border-radius: 50%;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 18px rgba(0,255,136,0.5);
-            border: 1px solid rgba(0,255,136,0.6);
-        }
-
-        #fireBtn {
-            right: 20px;
-            bottom: 80px;
-            width: 110px;
-            height: 110px;
-            background: radial-gradient(circle at 35% 35%, rgba(255,34,68,0.3), rgba(100,0,20,0.5));
-            border: 2px solid rgba(255,34,68,0.5);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: var(--font-hud);
-            font-weight: bold;
-            color: var(--neon-red);
-            font-size: 0.9em;
-            letter-spacing: 0.1em;
-            position: absolute;
-        }
-
-        #fireBtn:active {
-            background: radial-gradient(circle, rgba(255,34,68,0.55), rgba(150,0,25,0.7));
-            transform: scale(0.93);
-            box-shadow: 0 0 30px rgba(255,34,68,0.6);
-        }
-
-        .controls {
-            position: absolute;
-            pointer-events: auto;
-            z-index: 100;
-        }
-
-        /* ═══════════════════════ CONNECTION / STATUS ═══════════════════════ */
-        #connectionStatus {
-            position: absolute;
-            top: 14px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 4px 14px;
-            border-radius: 2px;
-            font-size: 0.65em;
-            letter-spacing: 0.2em;
-            font-weight: bold;
-            z-index: 100;
-            border: 1px solid;
-            pointer-events: none;
-        }
-
-        /* Connected = invisible; only show on problem states */
-        .connected { display: none; }
-        .connecting { background: rgba(255,221,0,0.12); border-color: rgba(255,221,0,0.5); color: var(--neon-yellow); animation: pulse 1s infinite; }
-        .disconnected { background: rgba(255,34,68,0.12); border-color: rgba(255,34,68,0.5); color: var(--neon-red); }
-
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        /* ═══════════════════════ RADAR ═══════════════════════ */
+        #radarContainer { position:absolute; top:56px; right:14px; z-index:50; pointer-events:none; }
+        #radarLabel { font-size:0.48em; letter-spacing:0.22em; color:rgba(0,255,136,0.32); text-align:center; margin-bottom:3px; }
+        #minimap { border-radius:50%; border:1.5px solid rgba(0,255,136,0.28); box-shadow:0 0 14px rgba(0,255,136,0.1); display:block; }
 
         /* ═══════════════════════ KILL FEED ═══════════════════════ */
-        #killFeed {
-            position: absolute;
-            top: 200px;
-            right: 14px;
-            text-align: right;
-            font-size: 0.72em;
-            max-width: 200px;
-            z-index: 50;
-            pointer-events: none;
-        }
+        #killFeed { position:absolute; top:56px; left:14px; text-align:left; font-size:0.66em; max-width:190px; z-index:50; pointer-events:none; }
+        .kill-msg { color:var(--neon-yellow); margin:3px 0; animation:fadeOut 3s forwards; background:rgba(0,0,0,0.68); padding:4px 9px; border-left:2px solid var(--neon-yellow); letter-spacing:0.04em; }
+        @keyframes fadeOut { 0%,75%{opacity:1} 100%{opacity:0} }
 
-        .kill-msg {
-            color: var(--neon-yellow);
-            margin: 3px 0;
-            animation: fadeOut 3s forwards;
-            background: rgba(0,0,0,0.75);
-            padding: 5px 10px;
-            border-right: 2px solid var(--neon-yellow);
-            letter-spacing: 0.05em;
-        }
+        /* ═══════════════════════ RELOAD INDICATOR ═══════════════════════ */
+        #reloadIndicator { position:absolute; top:56px; left:50%; transform:translateX(-50%); color:var(--neon-orange); font-size:0.72em; letter-spacing:0.2em; text-shadow:0 0 10px var(--neon-orange); display:none; z-index:100; }
 
-        @keyframes fadeOut { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+        /* ═══════════════════════ CONNECTION STATUS ═══════════════════════ */
+        #connectionStatus { position:absolute; top:56px; left:50%; transform:translateX(-50%); padding:3px 12px; border-radius:2px; font-size:0.58em; letter-spacing:0.16em; z-index:101; border:1px solid; pointer-events:none; margin-top:22px; }
+        .connected    { display:none; }
+        .connecting   { background:rgba(255,221,0,0.1); border-color:rgba(255,221,0,0.5); color:var(--neon-yellow); animation:pulse 1s infinite; }
+        .disconnected { background:rgba(255,34,68,0.1); border-color:rgba(255,34,68,0.5); color:var(--neon-red); }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-        /* ═══════════════════════ RELOAD ═══════════════════════ */
-        #reloadIndicator {
-            position: absolute;
-            bottom: 220px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: var(--neon-orange);
-            font-size: 0.85em;
-            letter-spacing: 0.2em;
-            text-shadow: 0 0 12px var(--neon-orange);
-            display: none;
-            z-index: 100;
-        }
-
-        /* Reload arc drawn on canvas instead */
-
-        /* ═══════════════════════ PAUSE ═══════════════════════ */
-        #pauseBtn {
-            position: absolute;
-            top: 14px;
-            right: 162px;
-            z-index: 130;
-            pointer-events: auto;
-            min-width: 80px;
-            padding: 5px 10px;
-            font-size: 0.65em;
-            letter-spacing: 0.12em;
-            border: 1px solid rgba(0,255,136,0.3);
-            border-radius: 2px;
-            background: rgba(6,16,10,0.8);
-            color: rgba(0,255,136,0.7);
-            font-family: var(--font-hud);
-        }
-
-        #pauseOverlay {
-            position: absolute;
-            inset: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0,0,0,0.55);
-            color: var(--neon-green);
-            font-family: var(--font-title);
-            font-size: 1.6em;
-            font-weight: 700;
-            text-align: center;
-            z-index: 125;
-            pointer-events: none;
-            text-shadow: 0 0 30px rgba(0,255,136,0.8);
-            letter-spacing: 0.1em;
-        }
-
-        /* ═══════════════════════ CHAT ═══════════════════════ */
-        #chatPanel {
-            position: absolute;
-            right: 14px;
-            bottom: 14px;
-            width: min(340px, 84vw);
-            z-index: 120;
-            pointer-events: auto;
-        }
-
-        @media (max-width: 900px) {
-            #chatPanel { width: min(300px, 60vw); }
-        }
-
-        #chatLog { display: none; }
-
-        #chatInputRow { display: flex; gap: 6px; }
-
-        #chatInput {
-            flex: 1;
-            background: rgba(6,16,10,0.85);
-            border: 1px solid rgba(0,255,136,0.25);
-            color: rgba(0,255,136,0.9);
-            border-radius: 2px;
-            padding: 8px 10px;
-            font-family: var(--font-hud);
-            font-size: 0.8em;
-            outline: none;
-            letter-spacing: 0.06em;
-        }
-
-        #chatInput:focus { border-color: rgba(0,255,136,0.5); }
-
-        #chatSendBtn {
-            min-width: 60px;
-            padding: 8px 10px;
-            font-size: 0.72em;
-            border-radius: 2px;
-        }
-
-        /* ═══════════════════════ SCREENS ═══════════════════════ */
-        .error-box {
-            background: rgba(255,34,68,0.1);
-            border: 1px solid rgba(255,34,68,0.4);
-            color: var(--neon-red);
-            padding: 10px 16px;
-            margin: 10px;
-            max-width: 90%;
-            text-align: center;
-            font-size: 0.8em;
-            letter-spacing: 0.06em;
-        }
-
-        .info-text {
-            color: rgba(0,255,136,0.35);
-            font-size: 0.72em;
-            margin: 10px;
-            text-align: center;
-            max-width: 90%;
-            letter-spacing: 0.06em;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 18px; height: 18px;
-            border: 2px solid rgba(0,255,136,0.2);
-            border-top-color: var(--neon-green);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ═══════════════════════ DAMAGE FLASH ═══════════════════════ */
-        #damageFlash {
-            position: absolute;
-            inset: 0;
-            background: rgba(255,34,68,0);
-            pointer-events: none;
-            z-index: 200;
-            transition: background 0.08s;
-        }
+        /* ═══════════════════════ STREAK BANNER ═══════════════════════ */
+        #streakBanner { position:absolute; top:30%; left:50%; transform:translateX(-50%); pointer-events:none; z-index:160; text-align:center; opacity:0; transition:opacity 0.15s; white-space:nowrap; }
+        #streakBanner .streak-word { font-family:var(--font-title); font-weight:900; letter-spacing:0.1em; line-height:1; display:block; }
+        #streakBanner .streak-sub  { font-family:var(--font-hud); font-size:0.68em; letter-spacing:0.28em; opacity:0.65; display:block; margin-top:4px; }
+        @keyframes streakIn { 0%{transform:translate(-50%,10px) scale(0.7);opacity:0} 60%{transform:translate(-50%,-3px) scale(1.05);opacity:1} 100%{transform:translate(-50%,0) scale(1);opacity:1} }
 
         /* ═══════════════════════ CROSSHAIR ═══════════════════════ */
-        #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 40;
-            opacity: 0.55;
-        }
+        #crosshair { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; z-index:40; opacity:0.48; }
 
         /* ═══════════════════════ ENEMY ALERT ═══════════════════════ */
-        #enemyAlert {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: var(--neon-red);
-            font-family: var(--font-title);
-            font-size: 0.75em;
-            letter-spacing: 0.3em;
-            pointer-events: none;
-            z-index: 45;
-            opacity: 0;
-            text-shadow: 0 0 20px var(--neon-red);
-            transition: opacity 0.2s;
+        #enemyAlert { position:absolute; top:calc(50% + 40px); left:50%; transform:translate(-50%,-50%); color:var(--neon-red); font-family:var(--font-title); font-size:0.68em; letter-spacing:0.3em; pointer-events:none; z-index:45; opacity:0; text-shadow:0 0 18px var(--neon-red); transition:opacity 0.2s; }
+
+        /* ═══════════════════════ DAMAGE FLASH ═══════════════════════ */
+        #damageFlash { position:absolute; inset:0; background:rgba(255,34,68,0); pointer-events:none; z-index:200; transition:background 0.08s; }
+
+        /* ═══════════════════════ MOVABLE JOYSTICK ═══════════════════════ */
+        #joystickZone {
+            position:absolute; left:0; top:48px; width:50%; bottom:0;
+            z-index:90; pointer-events:auto;
         }
+        #joystick {
+            position:absolute; width:110px; height:110px; border-radius:50%;
+            background:radial-gradient(circle, rgba(0,255,136,0.07) 0%, transparent 70%);
+            border:1.5px solid rgba(0,255,136,0.22);
+            pointer-events:none; display:none; transform:translate(-50%,-50%);
+        }
+        #joystickKnob {
+            position:absolute; width:44px; height:44px; top:50%; left:50%;
+            transform:translate(-50%,-50%);
+            background:radial-gradient(circle at 35% 35%, rgba(0,255,136,0.72), rgba(0,150,65,0.5));
+            border-radius:50%; border:1px solid rgba(0,255,136,0.5);
+            box-shadow:0 0 12px rgba(0,255,136,0.38);
+        }
+
+        /* ═══════════════════════ FIRE ZONE ═══════════════════════ */
+        #fireZone {
+            position:absolute; right:0; top:48px; width:50%; bottom:0;
+            z-index:90; pointer-events:auto;
+            display:flex; align-items:flex-end; justify-content:flex-end;
+            padding:0 32px 32px 0;
+        }
+        #fireBtn {
+            width:84px; height:84px; border-radius:50%;
+            background:radial-gradient(circle at 35% 35%, rgba(255,34,68,0.22), rgba(80,0,15,0.4));
+            border:1.5px solid rgba(255,34,68,0.4);
+            display:flex; align-items:center; justify-content:center;
+            font-family:var(--font-hud); font-size:0.7em; letter-spacing:0.1em;
+            color:rgba(255,34,68,0.75); pointer-events:auto; flex-shrink:0;
+            transition:transform 0.08s,box-shadow 0.08s;
+        }
+        #fireBtn:active { background:radial-gradient(circle,rgba(255,34,68,0.48),rgba(120,0,20,0.62)); transform:scale(0.91); box-shadow:0 0 22px rgba(255,34,68,0.5); }
+        .controls { position:absolute; pointer-events:auto; z-index:100; }
+
+        /* ═══════════════════════ CHAT ═══════════════════════ */
+        #chatPanel { position:absolute; right:130px; bottom:14px; width:190px; z-index:120; pointer-events:auto; }
+        #chatLog { display:none; }
+        #chatInputRow { display:flex; gap:5px; }
+        #chatInput { flex:1; background:rgba(4,10,7,0.82); border:1px solid rgba(0,255,136,0.18); color:rgba(0,255,136,0.82); border-radius:2px; padding:7px 8px; font-family:var(--font-hud); font-size:0.7em; outline:none; letter-spacing:0.05em; }
+        #chatInput:focus { border-color:rgba(0,255,136,0.42); }
+        #chatSendBtn { min-width:46px; padding:7px 8px; font-size:0.62em; border-radius:2px; }
 
         /* ═══════════════════════ SCANLINE ═══════════════════════ */
-        .scanline {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 3px,
-                rgba(0,255,136,0.012) 3px,
-                rgba(0,255,136,0.012) 4px
-            );
-            pointer-events: none;
-            z-index: 1000;
-        }
+        .scanline { position:fixed; top:0; left:0; width:100%; height:100%; background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,136,0.01) 3px,rgba(0,255,136,0.01) 4px); pointer-events:none; z-index:1000; }
 
-        /* ═══════════════════════ KILL STREAK BANNER ═══════════════════════ */
-        #streakBanner {
-            position: absolute;
-            top: 38%;
-            left: 50%;
-            transform: translateX(-50%);
-            pointer-events: none;
-            z-index: 160;
-            text-align: center;
-            opacity: 0;
-            transition: opacity 0.15s;
-            white-space: nowrap;
-        }
-        #streakBanner .streak-word {
-            font-family: var(--font-title);
-            font-weight: 900;
-            letter-spacing: 0.1em;
-            line-height: 1;
-            display: block;
-        }
-        #streakBanner .streak-sub {
-            font-family: var(--font-hud);
-            font-size: 0.72em;
-            letter-spacing: 0.3em;
-            opacity: 0.65;
-            display: block;
-            margin-top: 5px;
-        }
-        @keyframes streakIn {
-            0%   { transform: translate(-50%, 12px) scale(0.7); opacity: 0; }
-            60%  { transform: translate(-50%, -4px) scale(1.06); opacity: 1; }
-            100% { transform: translate(-50%, 0)    scale(1);    opacity: 1; }
-        }
-        @keyframes streakOut {
-            0%   { opacity: 1; }
-            100% { opacity: 0; transform: translate(-50%, -10px); }
-        }
+        /* ═══════════════════════ SCREENS ═══════════════════════ */
+        .error-box { background:rgba(255,34,68,0.1); border:1px solid rgba(255,34,68,0.4); color:var(--neon-red); padding:10px 16px; margin:10px; max-width:90%; text-align:center; font-size:0.8em; letter-spacing:0.06em; }
+        .info-text { color:rgba(0,255,136,0.35); font-size:0.72em; margin:10px; text-align:center; max-width:90%; letter-spacing:0.06em; }
+        .loading { display:inline-block; width:18px; height:18px; border:2px solid rgba(0,255,136,0.2); border-top-color:var(--neon-green); border-radius:50%; animation:spin 1s linear infinite; }
+        @keyframes spin { to{transform:rotate(360deg)} }
 
-        /* ═══════════════════════ SCORE BAR ═══════════════════════ */
-        #scoreBar {
-            position: absolute;
-            top: 14px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            background: rgba(4,12,8,0.85);
-            border: 1px solid rgba(0,255,136,0.2);
-            padding: 5px 16px;
-            z-index: 100;
-            pointer-events: none;
-            white-space: nowrap;
-        }
-        .score-side { display: flex; flex-direction: column; align-items: center; min-width: 52px; }
-        .score-num { font-family: var(--font-title); font-size: 1.6em; font-weight: 900; line-height: 1; }
-        .score-num.mine  { color: var(--neon-green); text-shadow: 0 0 14px rgba(0,255,136,0.7); }
-        .score-num.enemy { color: var(--neon-red);   text-shadow: 0 0 14px rgba(255,34,68,0.6); }
-        .score-lbl { font-size: 0.52em; letter-spacing: 0.2em; color: rgba(0,255,136,0.35); margin-top: 2px; }
-        .score-divider { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-        .score-divider-label { font-size: 0.52em; letter-spacing: 0.15em; color: rgba(0,255,136,0.3); }
-        .score-limit-pips { display: flex; gap: 5px; }
-        .score-pip { width: 7px; height: 7px; border-radius: 50%; border: 1px solid rgba(0,255,136,0.25); transition: all 0.2s; }
-        .score-pip.mine-filled  { background: var(--neon-green); box-shadow: 0 0 6px var(--neon-green); border-color: var(--neon-green); }
-        .score-pip.enemy-filled { background: var(--neon-red);   box-shadow: 0 0 6px var(--neon-red);   border-color: var(--neon-red); }
-
-        /* ═══════════════════════ TARGET KILLS PICKER ═══════════════════════ */
-        #killTargetPicker { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 14px 0 20px; }
-        #killTargetPicker label { font-size: 0.72em; letter-spacing: 0.2em; color: rgba(0,255,136,0.5); }
-        .ktp-row { display: flex; gap: 8px; }
-        .ktp-btn {
-            min-width: 52px; padding: 10px 0;
-            font-size: 1em; font-family: var(--font-title); font-weight: 700;
-            letter-spacing: 0.05em; border: 1px solid rgba(0,255,136,0.3);
-            background: transparent; color: rgba(0,255,136,0.55); cursor: pointer; transition: all 0.15s;
-        }
-        .ktp-btn.selected, .ktp-btn:hover {
-            background: rgba(0,255,136,0.1); border-color: var(--neon-green);
-            color: var(--neon-green); box-shadow: 0 0 12px rgba(0,255,136,0.2);
-        }
+        /* ═══════════════════════ KILL TARGET PICKER ═══════════════════════ */
+        #killTargetPicker { display:flex; flex-direction:column; align-items:center; gap:10px; margin:14px 0 20px; }
+        #killTargetPicker label { font-size:0.72em; letter-spacing:0.2em; color:rgba(0,255,136,0.5); }
+        .ktp-row { display:flex; gap:8px; }
+        .ktp-btn { min-width:52px; padding:10px 0; font-size:1em; font-family:var(--font-title); font-weight:700; letter-spacing:0.05em; border:1px solid rgba(0,255,136,0.3); background:transparent; color:rgba(0,255,136,0.55); cursor:pointer; transition:all 0.15s; }
+        .ktp-btn.selected,.ktp-btn:hover { background:rgba(0,255,136,0.1); border-color:var(--neon-green); color:var(--neon-green); box-shadow:0 0 12px rgba(0,255,136,0.2); }
 
         /* ═══════════════════════ ROUND TALLY ═══════════════════════ */
-        .round-tally { display: flex; gap: 6px; margin: 8px 0 4px; align-items: center; }
-        .tally-label { font-size: 0.58em; letter-spacing: 0.2em; color: rgba(0,255,136,0.35); margin-right: 4px; }
-        .tally-pip { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,255,136,0.25); }
-        .tally-pip.win  { background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
-        .tally-pip.loss { background: var(--neon-red);   box-shadow: 0 0 8px var(--neon-red); }
+        .round-tally { display:flex; gap:6px; margin:8px 0 4px; align-items:center; }
+        .tally-label { font-size:0.58em; letter-spacing:0.2em; color:rgba(0,255,136,0.35); margin-right:4px; }
+        .tally-pip { width:12px; height:12px; border-radius:50%; border:1px solid rgba(0,255,136,0.25); }
+        .tally-pip.win  { background:var(--neon-green); box-shadow:0 0 8px var(--neon-green); }
+        .tally-pip.loss { background:var(--neon-red);   box-shadow:0 0 8px var(--neon-red); }
 
         /* ═══════════════════════ GAME OVER ═══════════════════════ */
-        #gameOverScreen h1 { font-size: 3em; }
-        #finalScore { color: rgba(0,255,136,0.6); margin: 6px 0 16px; letter-spacing: 0.1em; font-size: 0.85em; }
-        .stat-box { display: flex; gap: 32px; margin: 10px 0 20px; }
-        .stat-item { text-align: center; }
-        .stat-item .val {
-            font-family: var(--font-title); font-size: 2.2em; font-weight: 900;
-            color: var(--neon-green); text-shadow: 0 0 20px rgba(0,255,136,0.8);
-        }
-        .stat-item .lbl { font-size: 0.6em; letter-spacing: 0.2em; color: rgba(0,255,136,0.4); }
+        #gameOverScreen h1 { font-size:3em; }
+        #finalScore { color:rgba(0,255,136,0.6); margin:6px 0 16px; letter-spacing:0.1em; font-size:0.85em; }
+        .stat-box { display:flex; gap:32px; margin:10px 0 20px; }
+        .stat-item { text-align:center; }
+        .stat-item .val { font-family:var(--font-title); font-size:2.2em; font-weight:900; color:var(--neon-green); text-shadow:0 0 20px rgba(0,255,136,0.8); }
+        .stat-item .lbl { font-size:0.6em; letter-spacing:0.2em; color:rgba(0,255,136,0.4); }
     </style>
 <base target="_blank">
 </head>
@@ -726,76 +406,102 @@
     </div>
 
     <!-- Game UI -->
-    <div id="gameUI" class="hidden" style="position: absolute; width: 100%; height: 100%; pointer-events: none;">
-        <div id="connectionStatus" class="disconnected">OFFLINE</div>
-        <div id="damageFlash"></div>
-        <div id="enemyAlert">⚠ ENEMY SPOTTED</div>
+    <div id="gameUI" class="hidden" style="position:absolute;width:100%;height:100%;pointer-events:none;">
 
-        <!-- Score bar -->
-        <div id="scoreBar">
-            <div class="score-side">
-                <span class="score-num mine" id="myScore">0</span>
-                <span class="score-lbl">YOU</span>
+        <!-- Rotate prompt (portrait only) -->
+        <div id="rotatePrompt">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#00ff88" stroke-width="2.5">
+                <rect x="10" y="6" width="28" height="36" rx="4"/>
+                <circle cx="24" cy="38" r="2"/>
+                <path d="M38 18 C44 18 44 30 38 30" stroke-dasharray="3 2"/>
+            </svg>
+            ROTATE TO LANDSCAPE
+        </div>
+
+        <!-- Top bar: HP/ammo left · score centre · stats+pause right -->
+        <div id="topBar">
+            <div class="tb-left">
+                <div class="tb-bar-row">
+                    <span class="tb-bar-icon" id="hpText">100</span>
+                    <div class="seg-bar health" id="healthSegs"></div>
+                </div>
+                <div class="tb-bar-row">
+                    <span class="tb-bar-icon" id="ammoText">30</span>
+                    <div class="seg-bar ammo" id="ammoSegs"></div>
+                </div>
             </div>
-            <div class="score-divider">
-                <span class="score-divider-label">FIRST TO</span>
-                <div class="score-limit-pips" id="scorePips"></div>
-                <span class="score-divider-label" id="targetLabel">10</span>
+
+            <div class="tb-center">
+                <div class="tb-score-block">
+                    <span class="tb-score-num mine" id="myScore">0</span>
+                    <span class="tb-score-lbl">YOU</span>
+                </div>
+                <div class="tb-divider">
+                    <span class="tb-divider-sep">—</span>
+                    <div class="tb-pips" id="scorePips"></div>
+                    <span class="tb-target-lbl" id="targetLabel">10</span>
+                </div>
+                <div class="tb-score-block">
+                    <span class="tb-score-num enemy" id="enemyScore">0</span>
+                    <span class="tb-score-lbl">ENEMY</span>
+                </div>
             </div>
-            <div class="score-side">
-                <span class="score-num enemy" id="enemyScore">0</span>
-                <span class="score-lbl">ENEMY</span>
+
+            <div class="tb-right">
+                <div class="tb-stat">
+                    <span class="tb-stat-val" id="killsText">0</span>
+                    <span class="tb-stat-lbl">KILLS</span>
+                </div>
+                <div class="tb-stat">
+                    <span class="tb-stat-val" id="deathsText">0</span>
+                    <span class="tb-stat-lbl">DEATHS</span>
+                </div>
+                <div class="tb-stat">
+                    <span class="tb-stat-val" id="pingText">--</span>
+                    <span class="tb-stat-lbl">PING</span>
+                </div>
+                <button id="pauseBtn" type="button">PAUSE</button>
             </div>
         </div>
 
-        <!-- Kill streak banner -->
+        <!-- Overlay elements -->
+        <div id="damageFlash"></div>
+        <div id="enemyAlert">⚠ ENEMY SPOTTED</div>
         <div id="streakBanner">
             <span class="streak-word" id="streakWord"></span>
             <span class="streak-sub" id="streakSub"></span>
         </div>
 
-        <!-- HUD Panel -->
-        <div id="hud">
-            <div class="hud-panel">
-                <div class="hud-row">
-                    <span class="hud-icon" id="hpText">100</span>
-                    <div class="seg-bar health" id="healthSegs"></div>
-                </div>
-                <div class="hud-row">
-                    <span class="hud-icon" id="ammoText">30</span>
-                    <div class="seg-bar ammo" id="ammoSegs"></div>
-                </div>
-                <div class="hud-chips">
-                    <span class="hud-chip">K<span id="killsText">0</span></span>
-                    <span class="hud-chip">D<span id="deathsText">0</span></span>
-                    <span class="hud-chip">~<span id="pingText">--</span></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Radar -->
+        <!-- Radar: top-right below top bar -->
         <div id="radarContainer">
             <div id="radarLabel">RADAR</div>
-            <canvas id="minimap" width="150" height="150"></canvas>
+            <canvas id="minimap" width="130" height="130"></canvas>
         </div>
 
+        <!-- Kill feed: top-left below top bar -->
         <div id="killFeed"></div>
+
+        <!-- Reload indicator: top-centre below top bar -->
         <div id="reloadIndicator">◌ RELOADING</div>
+
+        <!-- Connection status: only shows on error -->
+        <div id="connectionStatus" class="disconnected">OFFLINE</div>
 
         <!-- Crosshair -->
         <div id="crosshair">
-            <svg width="30" height="30" viewBox="0 0 30 30">
-                <circle cx="15" cy="15" r="6" fill="none" stroke="rgba(0,255,136,0.7)" stroke-width="1"/>
-                <line x1="15" y1="0" x2="15" y2="10" stroke="rgba(0,255,136,0.5)" stroke-width="1"/>
-                <line x1="15" y1="20" x2="15" y2="30" stroke="rgba(0,255,136,0.5)" stroke-width="1"/>
-                <line x1="0" y1="15" x2="10" y2="15" stroke="rgba(0,255,136,0.5)" stroke-width="1"/>
-                <line x1="20" y1="15" x2="30" y2="15" stroke="rgba(0,255,136,0.5)" stroke-width="1"/>
+            <svg width="28" height="28" viewBox="0 0 28 28">
+                <circle cx="14" cy="14" r="5" fill="none" stroke="rgba(0,255,136,0.65)" stroke-width="1"/>
+                <line x1="14" y1="0" x2="14" y2="9" stroke="rgba(0,255,136,0.45)" stroke-width="1"/>
+                <line x1="14" y1="19" x2="14" y2="28" stroke="rgba(0,255,136,0.45)" stroke-width="1"/>
+                <line x1="0" y1="14" x2="9" y2="14" stroke="rgba(0,255,136,0.45)" stroke-width="1"/>
+                <line x1="19" y1="14" x2="28" y2="14" stroke="rgba(0,255,136,0.45)" stroke-width="1"/>
             </svg>
         </div>
 
-        <button id="pauseBtn" type="button">PAUSE</button>
-        <div id="pauseOverlay">PAUSED<br><span style="font-size:0.5em; opacity:0.6; font-family:var(--font-hud); font-weight:400">EITHER PLAYER CAN RESUME</span></div>
+        <!-- Pause overlay -->
+        <div id="pauseOverlay">PAUSED<br><span style="font-size:0.45em;opacity:0.6;font-family:var(--font-hud);font-weight:400">EITHER PLAYER CAN RESUME</span></div>
 
+        <!-- Chat: bottom centre-right -->
         <div id="chatPanel">
             <div id="chatInputRow">
                 <input id="chatInput" type="text" maxlength="120" placeholder="COMMS..." autocomplete="off">
@@ -803,10 +509,18 @@
             </div>
         </div>
 
-        <div id="joystick" class="controls">
-            <div id="joystickKnob"></div>
+        <!-- Movable joystick zone (left half below top bar) -->
+        <div id="joystickZone">
+            <div id="joystick">
+                <div id="joystickKnob"></div>
+            </div>
         </div>
-        <div id="fireBtn" class="controls">FIRE</div>
+
+        <!-- Fire zone (right half below top bar) -->
+        <div id="fireZone">
+            <div id="fireBtn">FIRE</div>
+        </div>
+
     </div>
 
     <!-- Game Over -->
@@ -1588,47 +1302,85 @@
         requestAnimationFrame(gameLoop);
     }
 
-    // ─── Joystick ─────────────────────────────────────────────────────────────
-    const joystick = document.getElementById('joystick');
-    const knob = document.getElementById('joystickKnob');
+    // ─── Movable Joystick ─────────────────────────────────────────────────────
+    // Joystick spawns wherever the thumb first touches within the left zone.
+    const joystickZone = document.getElementById('joystickZone');
+    const joystick     = document.getElementById('joystick');
+    const knob         = document.getElementById('joystickKnob');
     let joystickCenter = { x: 0, y: 0 };
+    let joystickTouchId = null;
 
-    function updateJoystickCenter() {
-        const r = joystick.getBoundingClientRect();
-        joystickCenter = { x: r.left + r.width/2, y: r.top + r.height/2 };
+    function placeJoystick(x, y) {
+        // Position the ring at touch point (relative to the zone element)
+        const zr = joystickZone.getBoundingClientRect();
+        joystick.style.left = (x - zr.left) + 'px';
+        joystick.style.top  = (y - zr.top)  + 'px';
+        joystick.style.display = 'block';
+        joystickCenter = { x, y };
+        // Reset knob to centre
+        knob.style.transform = 'translate(-50%, -50%)';
     }
 
-    joystick.addEventListener('touchstart', e => {
+    function hideJoystick() {
+        joystick.style.display = 'none';
+        joystickVector = { x: 0, y: 0 };
+        joystickActive = false; joystickFiring = false; syncFirePressed();
+    }
+
+    joystickZone.addEventListener('touchstart', e => {
         e.preventDefault();
-        updateJoystickCenter();
+        if (joystickTouchId !== null) return; // already tracking a touch
+        const t = e.changedTouches[0];
+        joystickTouchId = t.identifier;
+        placeJoystick(t.clientX, t.clientY);
         joystickActive = true; joystickFiring = true; syncFirePressed();
-        updateJoystick(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: false });
 
-    joystick.addEventListener('touchmove', e => {
+    joystickZone.addEventListener('touchmove', e => {
         e.preventDefault();
-        if (joystickActive) updateJoystick(e.touches[0].clientX, e.touches[0].clientY);
+        for (const t of e.changedTouches) {
+            if (t.identifier !== joystickTouchId) continue;
+            updateJoystick(t.clientX, t.clientY);
+        }
     }, { passive: false });
 
-    joystick.addEventListener('touchend', e => {
+    joystickZone.addEventListener('touchend', e => {
         e.preventDefault();
-        joystickActive = false; joystickVector = {x:0,y:0}; joystickFiring = false; syncFirePressed();
-        knob.style.transform = `translate(-50%, -50%)`;
+        for (const t of e.changedTouches) {
+            if (t.identifier !== joystickTouchId) continue;
+            joystickTouchId = null;
+            hideJoystick();
+        }
     }, { passive: false });
 
-    joystick.addEventListener('mousedown', e => {
+    joystickZone.addEventListener('touchcancel', e => {
+        joystickTouchId = null;
+        hideJoystick();
+    }, { passive: false });
+
+    // Mouse fallback for desktop testing
+    joystickZone.addEventListener('mousedown', e => {
         e.preventDefault();
-        updateJoystickCenter();
+        placeJoystick(e.clientX, e.clientY);
         joystickActive = true; joystickFiring = true; syncFirePressed();
+    });
+    window.addEventListener('mousemove', e => {
+        if (!joystickActive) return;
         updateJoystick(e.clientX, e.clientY);
     });
-
-    window.addEventListener('mousemove', e => { if (joystickActive) updateJoystick(e.clientX, e.clientY); });
     window.addEventListener('mouseup', () => {
-        joystickActive = false; joystickVector = {x:0,y:0};
-        knob.style.transform = `translate(-50%, -50%)`;
-        joystickFiring = false; syncFirePressed();
+        if (!joystickActive) return;
+        hideJoystick();
     });
+
+    // ─── Fire button (right zone, auto-fires on touch-hold) ───────────────────
+    const fireBtn = document.getElementById('fireBtn');
+    if (fireBtn) {
+        fireBtn.addEventListener('touchstart', e => { e.preventDefault(); fireButtonFiring = true; syncFirePressed(); }, { passive: false });
+        fireBtn.addEventListener('touchend',   e => { e.preventDefault(); fireButtonFiring = false; syncFirePressed(); }, { passive: false });
+        fireBtn.addEventListener('mousedown',  e => { fireButtonFiring = true;  syncFirePressed(); });
+        fireBtn.addEventListener('mouseup',    e => { fireButtonFiring = false; syncFirePressed(); });
+    }
 
     if (chatSendBtn) chatSendBtn.addEventListener('click', () => sendChat());
     if (pauseBtn) pauseBtn.addEventListener('click', () => togglePauseByMe());
@@ -1643,16 +1395,13 @@
 
     function updateJoystick(clientX, clientY) {
         const dx = clientX - joystickCenter.x, dy = clientY - joystickCenter.y;
-        const dist = Math.sqrt(dx*dx + dy*dy), maxDist = 40;
+        const dist = Math.sqrt(dx*dx + dy*dy), maxDist = 42;
         const nx = dist > maxDist ? (dx/dist)*maxDist : dx;
         const ny = dist > maxDist ? (dy/dist)*maxDist : dy;
         knob.style.transform = `translate(calc(-50% + ${nx}px), calc(-50% + ${ny}px))`;
         const len = Math.sqrt(nx*nx + ny*ny);
         if (len > 0) joystickVector = { x: nx/maxDist, y: ny/maxDist };
     }
-
-    const fireBtn = document.getElementById('fireBtn');
-    if (fireBtn) { fireBtn.style.display = 'none'; fireBtn.style.pointerEvents = 'none'; }
 
     // ─── Update ───────────────────────────────────────────────────────────────
     function update(dt) {
