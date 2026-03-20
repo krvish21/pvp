@@ -255,10 +255,18 @@
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
         /* ═══════════════════════ STREAK BANNER ═══════════════════════ */
-        #streakBanner { position:absolute; top:35%; left:50%; transform:translateX(-50%); pointer-events:none; z-index:160; text-align:center; opacity:0; transition:opacity 0.15s; white-space:nowrap; }
+        #streakBanner { position:absolute; top:35%; left:50%; transform:translateX(-50%); pointer-events:none; z-index:160; text-align:center; opacity:0; white-space:nowrap; }
         #streakBanner .streak-word { font-family:var(--font-title); font-weight:900; letter-spacing:0.1em; line-height:1; display:block; }
         #streakBanner .streak-sub  { font-family:var(--font-hud); font-size:0.68em; letter-spacing:0.28em; opacity:0.65; display:block; margin-top:4px; }
-        @keyframes streakIn { 0%{transform:translate(-50%,10px) scale(0.7);opacity:0} 60%{transform:translate(-50%,-3px) scale(1.05);opacity:1} 100%{transform:translate(-50%,0) scale(1);opacity:1} }
+        @keyframes streakIn {
+            0%   { transform: translate(-50%,10px) scale(0.7); opacity:0; }
+            60%  { transform: translate(-50%,-3px) scale(1.05); opacity:1; }
+            100% { transform: translate(-50%,0) scale(1); opacity:1; }
+        }
+        @keyframes streakOut {
+            0%   { opacity: 1; }
+            100% { opacity: 0; transform: translate(-50%, -8px) scale(0.95); }
+        }
 
         /* ═══════════════════════ CROSSHAIR ═══════════════════════ */
         #crosshair { position:absolute; top:calc(50% - 26px); left:50%; transform:translate(-50%,-50%); pointer-events:none; z-index:40; opacity:0.45; }
@@ -640,18 +648,20 @@
         const es = document.getElementById('enemyScore');
         if (ms) ms.textContent = myPlayer.kills;
         if (es) es.textContent = enemyKills;
-        // Update pips
+        // Update pips — use direct comparison, no rounding artifacts
         const show = Math.min(killTarget, 10);
         for (let i = 0; i < show; i++) {
             const pip = document.getElementById(`pip-${i}`);
             if (!pip) continue;
-            const myFrac  = i < Math.round(myPlayer.kills  / killTarget * show);
-            const enFrac  = i < Math.round(enemyKills       / killTarget * show);
-            pip.className = 'score-pip' + (myFrac ? ' mine-filled' : (enFrac ? ' enemy-filled' : ''));
+            // pip i lights up when kills > (i / show) * killTarget
+            const myLit  = myPlayer.kills  >= Math.ceil((i + 1) / show * killTarget);
+            const enLit  = enemyKills       >= Math.ceil((i + 1) / show * killTarget);
+            pip.className = 'score-pip' + (myLit ? ' mine-filled' : (enLit ? ' enemy-filled' : ''));
         }
     }
 
     function checkRoundOver() {
+        if (!gameState.gameStarted) return false; // already ended
         if (myPlayer.kills >= killTarget) {
             roundHistory.push('win');
             endGame('VICTORY');
@@ -699,22 +709,35 @@
 
         word.textContent  = tier.word;
         sub.textContent   = tier.sub;
-        word.style.fontSize  = tier.size;
-        word.style.color     = tier.color;
+        word.style.fontSize   = tier.size;
+        word.style.color      = tier.color;
         word.style.textShadow = `0 0 30px ${tier.color}, 0 0 60px ${tier.color}66`;
-        sub.style.color      = tier.color;
+        sub.style.color       = tier.color;
 
-        banner.style.animation = 'none';
-        banner.offsetHeight; // reflow
-        banner.style.opacity = '1';
-        banner.style.animation = 'streakIn 0.25s ease forwards';
-        banner.style.left = '50%';
-        banner.style.transform = 'translateX(-50%)';
-
+        // Clear any running animation/timer
         clearTimeout(banner._hideTimer);
+        banner.style.animation = 'none';
+        banner.style.opacity   = '1';
+        banner.style.pointerEvents = 'none';
+        banner.offsetHeight; // force reflow so animation restarts cleanly
+        banner.style.animation = 'streakIn 0.25s ease forwards';
+
         banner._hideTimer = setTimeout(() => {
-            banner.style.opacity = '0';
-        }, 2200);
+            banner.style.animation = 'streakOut 0.4s ease forwards';
+            // After out animation completes, fully hide
+            setTimeout(() => {
+                banner.style.opacity   = '0';
+                banner.style.animation = 'none';
+            }, 420);
+        }, 2000);
+    }
+
+    function hideStreakBanner() {
+        const banner = document.getElementById('streakBanner');
+        if (!banner) return;
+        clearTimeout(banner._hideTimer);
+        banner.style.animation = 'none';
+        banner.style.opacity   = '0';
     }
 
     // ─── Animated Background Floaters ───────────────────────────────────────
@@ -1452,8 +1475,11 @@
                 setPauseState(!!data.paused, 'enemy', false);
                 break;
             case 'enemyScore':
+                // The other player is telling us their kill count
                 enemyKills = data.kills || 0;
                 updateScoreDisplay();
+                // Check if the enemy has now reached the kill target (their win = our loss)
+                checkRoundOver();
                 break;
             case 'syncConfig':
                 // Guest receives host's chosen kill target and map seed
@@ -1464,6 +1490,9 @@
                 if (typeof data.mapSeed === 'number') {
                     applyMapSeed(data.mapSeed);
                 }
+                // New round starting — reset enemy score display
+                enemyKills = 0;
+                updateScoreDisplay();
                 break;
         }
     }
@@ -1704,6 +1733,8 @@
         buildScorePips();
         enemyKills = 0;
         streakCount = 0; lastKillTime = 0;
+        if (streakTimer) { clearTimeout(streakTimer); streakTimer = null; }
+        hideStreakBanner();
 
         const spawnIdx = gameState.isHost ? 0 : 1;
         const spawn = pickSafeSpawn(spawnIdx);
@@ -2864,9 +2895,14 @@
     }
 
     function endGame(reason) {
+        if (!gameState.gameStarted) return; // guard against double-fire
         gameState.gameStarted = false;
         setPauseState(false, 'system', false);
         stopPing();
+        hideStreakBanner();
+        // Hide respawn countdown if showing
+        const rcd = document.getElementById('respawnCountdown');
+        if (rcd) rcd.style.display = 'none';
         document.getElementById('gameUI').classList.add('hidden');
         document.getElementById('gameOverScreen').classList.remove('hidden');
         document.getElementById('winnerText').textContent = reason || 'GAME OVER';
